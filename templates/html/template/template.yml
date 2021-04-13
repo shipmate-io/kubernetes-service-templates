@@ -1,0 +1,47 @@
+api: v1
+
+meta:
+  name: HTML
+  description: Static HTML website
+
+form:
+
+  - name: Source code
+    questions:
+
+      - name: Path to HTML source code
+        description: >
+          The directory in your Git repository that contains your static HTML files.
+        variable: path_to_source_code
+        required: true
+        type: file_path
+
+deployment:
+
+  - type: image
+    name: html
+    dockerfile: Dockerfile
+
+  - type: stateless_set
+    name: html
+    containers:
+      - name: html
+        image: "{* image.html *}"
+        memory:
+          min: 32
+          max: 128
+        cpus:
+          min: 250
+          max: 500
+
+  - type: entrypoint
+    name: html
+    alias: HTML service
+    target: "{* stateless_set.html *}"
+    port: 8080
+
+interface:
+
+  - type: logs
+    name: NGINX
+    source: "{* stateless_set.html *}"

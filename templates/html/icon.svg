@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="700px" height="700px" viewBox="0 0 700 700" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>html</title>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="html" transform="translate(93.000000, 93.000000)" fill-rule="nonzero">
+            <circle id="Oval" fill="#F6F7FC" cx="257" cy="257" r="256.5"></circle>
+            <polygon id="Path" fill="#E34E26" points="98.4174612 433.79685 63 36 452 36 416.539528 433.82835 257.405376 478"></polygon>
+            <polygon id="Path" fill="#EF662A" points="258 70 258 445 386.682205 409.34964 417 70"></polygon>
+            <polygon id="Path" fill="#FFFFFF" points="136 117 149.129941 264.382261 317.96362 264.382261 312.297681 327.597046 257.9371 342.301863 203.679469 327.618433 200.051892 287.028506 151.156755 287.028506 158.148514 365.273838 257.925552 393 357.828635 365.273838 371.221972 215.651044 193.681765 215.651044 189.223953 165.741543 375.487888 165.741543 375.636539 165.741543 380 117"></polygon>
+            <g id="Group" transform="translate(136.000000, 117.000000)" fill="#EBEBEB">
+                <polygon id="Path" points="122 0.0928185053 0.114881288 0.0928185053 13.2324588 147.305669 122 147.305669 122 98.6304662 57.74233 98.6304662 53.2887163 48.7783345 122 48.7783345"></polygon>
+                <polygon id="Path" points="122 225.114587 121.937159 225.135705 67.7306197 210.469153 64.1064588 169.925883 15.2573642 169.925883 22.2425392 248.081274 121.925622 275.775566 122 275.754694"></polygon>
+            </g>
+        </g>
+    </g>
+</svg>
