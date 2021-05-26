@@ -2,27 +2,27 @@ import { Template, utils } from 'tests'
 import path from 'path'
 import ApiError from '@/api/ApiError';
 
-const html_template = new Template(path.resolve(__dirname, '../'))
+const htmlTemplate = new Template(path.resolve(__dirname, '../'))
 
-test('the template is valid', async () => {
+test('the syntax of the template is valid', async () => {
 
-    await html_template.assertThatSyntaxIsValid()
+    await expect(htmlTemplate).toHaveValidSyntax()
 
 })
 
 test('the template cannot be parsed without path_to_source_code', async () => {
 
-    let thrown_error
+    let thrownError
 
     try {
-        await html_template.parse('app', 'website')
+        await htmlTemplate.parse('app', 'website')
     } catch (error) {
-        thrown_error = error
+        thrownError = error
     }
 
-    expect(thrown_error).toBeInstanceOf(ApiError)
-    expect(thrown_error.status).toBe(422)
-    expect(thrown_error.errors).toMatchObject({
+    expect(thrownError).toBeInstanceOf(ApiError)
+    expect(thrownError.status).toBe(422)
+    expect(thrownError.errors).toMatchObject({
         path_to_source_code: [ 'The path to html source code field is required.' ],
     })
 
@@ -34,27 +34,27 @@ test('the template can be parsed', async () => {
         'path_to_source_code': 'src/',
     }
 
-    const actual_template = await html_template.parse('app', 'website', variables)
+    const actualTemplate = await htmlTemplate.parse('app', 'website', variables)
 
-    const expected_template = utils.readParsedTemplateFile(__dirname+'/concerns/parsed_template.yml')
+    const expectedTemplate = utils.readParsedTemplateFile(__dirname+'/concerns/parsed_template.yml')
 
-    utils.assertThatTemplatesAreEqual(actual_template, expected_template)
+    utils.assertThatTemplatesAreEqual(actualTemplate, expectedTemplate)
 
 })
 
 test("the service works correctly when installed", async () => {
 
-    const code_repository_path = path.resolve(__dirname, 'concerns/application/')
+    const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
 
     const variables = {
         'path_to_source_code': 'src/',
     }
 
-    await html_template.install(code_repository_path, variables)
+    await htmlTemplate.install(codeRepositoryPath, variables)
 
     try {
 
-        const host = `http://localhost:${html_template.getEntrypoint('html')?.host_port}`
+        const host = `http://localhost:${htmlTemplate.getEntrypoint('html')?.host_port}`
 
         expect((await page.goto(`${host}/`))?.status()).toBe(200)
         expect(page.url()).toEqual(`${host}/`)
@@ -85,7 +85,7 @@ test("the service works correctly when installed", async () => {
         expect(await page.content()).toContain('Woops, page not found!')
 
     } finally {
-        await html_template.uninstall()
+        await htmlTemplate.uninstall()
     }
 
 }, 1000 * 60 * 3)
