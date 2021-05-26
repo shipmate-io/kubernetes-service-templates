@@ -23,17 +23,17 @@ In order to test a service template, you can add a `tests/test.ts` file to the d
 To run the tests, you first need to install the npm dependencies of the tests:
 
 ```
-npm install
+yarn
 ```
 
 Then run the tests of the specific template:
 
 ```
-npx jest templates/<template>
+yarn jest templates/<template>
 ```
 
 Or run the tests of all the templates at once:
 
 ```
-npx jest
+yarn jest
 ```
