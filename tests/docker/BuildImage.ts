@@ -22,22 +22,22 @@ class BuildImage
         this.docker = new Docker()
     }
 
-    async execute(code_repository_path: string, template: ParsedTemplate, image: Image): Promise<void>
+    async execute(codeRepositoryPath: string, template: ParsedTemplate, image: Image): Promise<void>
     {
-        const build_directory: Directory = tmp.dirSync()
+        const buildDirectory: Directory = tmp.dirSync()
 
         try {
 
-            await this.copyCodeRepositoryContentsToBuildFolder(code_repository_path, image, build_directory)
+            await this.copyCodeRepositoryContentsToBuildFolder(codeRepositoryPath, image, buildDirectory)
 
-            this.copyImageFilesToBuildFolder(template.files, build_directory)
+            this.copyImageFilesToBuildFolder(template.files, buildDirectory)
 
-            const stream: NodeJS.ReadableStream = await this.buildImage(image, build_directory)
+            const stream: NodeJS.ReadableStream = await this.buildImage(image, buildDirectory)
 
             await this.processBuildOutput(stream)
 
         } finally {
-            rimraf.sync(build_directory.name)
+            rimraf.sync(buildDirectory.name)
         }
     }
 
@@ -45,26 +45,26 @@ class BuildImage
      * Do not copy .git directory and respect .gitignore file.
      */
     async copyCodeRepositoryContentsToBuildFolder(
-        code_repository_path: string, image: Image, build_directory: Directory
+        codeRepositoryPath: string, image: Image, buildDirectory: Directory
     ): Promise<void>
     {
-        code_repository_path = code_repository_path.replace(/[/]+$/, "")
+        codeRepositoryPath = codeRepositoryPath.replace(/[/]+$/, "")
 
-        await exec(`rsync -azP --delete --exclude='.git' --filter=":- .gitignore" ${code_repository_path}/. ${build_directory.name}/code-repository/`)
+        await exec(`rsync -azP --delete --exclude='.git' --filter=":- .gitignore" ${codeRepositoryPath}/. ${buildDirectory.name}/code-repository/`)
     }
 
-    copyImageFilesToBuildFolder(files: TemplateFiles, build_directory: Directory): void
+    copyImageFilesToBuildFolder(files: TemplateFiles, buildDirectory: Directory): void
     {
         for (const [path, contents] of Object.entries(files)) {
-            const folder_path = path.substring(0, path.lastIndexOf("/"))
-            mkdirp.sync(`${build_directory.name}/${folder_path}`)
-            fs.writeFileSync(`${build_directory.name}/${path}`, contents)
+            const folderPath = path.substring(0, path.lastIndexOf("/"))
+            mkdirp.sync(`${buildDirectory.name}/${folderPath}`)
+            fs.writeFileSync(`${buildDirectory.name}/${path}`, contents)
         }
     }
 
-    async buildImage(image: Image, build_directory: Directory): Promise<NodeJS.ReadableStream>
+    async buildImage(image: Image, buildDirectory: Directory): Promise<NodeJS.ReadableStream>
     {
-        const pack = tarfs.pack(build_directory.name)
+        const pack = tarfs.pack(buildDirectory.name)
 
         return await this.docker.buildImage(pack, {
             dockerfile: image.dockerfile,

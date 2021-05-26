@@ -11,11 +11,11 @@ class CreateNetwork
 
     async execute(name: string): Promise<void>
     {
-        const docker_networks: Docker.NetworkInspectInfo[] = await this.docker.listNetworks()
+        const dockerNetworks: Docker.NetworkInspectInfo[] = await this.docker.listNetworks()
 
-        const network_exists: boolean = docker_networks.map(network => network.Name).includes(name)
+        const networkExists: boolean = dockerNetworks.map(network => network.Name).includes(name)
 
-        if(network_exists) return
+        if(networkExists) return
 
         await this.docker.createNetwork({ Name: name })
     }

@@ -22,19 +22,19 @@ export class InstallTemplate
     }
 
     async execute(
-        code_repository_path: string|null, template_path: string, template_version: string, variables: Variables, 
-        environment: Variables, initialization_time_in_seconds: number
+        codeRepositoryPath: string|null, templatePath: string, templateVersion: string, variables: Variables, 
+        environment: Variables, initializationTimeInSeconds: number
     ): Promise<ParsedTemplate>
     {
-        const application_slug = uuidv4().substring(0, 8)
-        const service_name = uuidv4().substring(0, 8)
+        const applicationSlug = uuidv4().substring(0, 8)
+        const serviceName = uuidv4().substring(0, 8)
         const template = await (new ParseTemplate).execute(
-            application_slug, service_name, template_path, template_version, variables, environment
+            applicationSlug, serviceName, templatePath, templateVersion, variables, environment
         )
 
         try {
             await new CreateNetwork().execute('smoothy')
-            await this.buildImages(code_repository_path, template)
+            await this.buildImages(codeRepositoryPath, template)
             await this.createVolumes(template)
             await this.createConfigFiles(template)
             await this.runContainers(template)
@@ -44,12 +44,12 @@ export class InstallTemplate
             throw error
         }
 
-        await new Promise(resolve => setTimeout(resolve, 1000 * initialization_time_in_seconds))
+        await new Promise(resolve => setTimeout(resolve, 1000 * initializationTimeInSeconds))
 
         return template
     }
 
-    async buildImages(code_repository_path: string|null, template: ParsedTemplate): Promise<void>
+    async buildImages(codeRepositoryPath: string|null, template: ParsedTemplate): Promise<void>
     {
         const images: Image[] = []
 
@@ -60,12 +60,12 @@ export class InstallTemplate
 
         if(images.length === 0) return
 
-        if(code_repository_path === null) {
+        if(codeRepositoryPath === null) {
             throw new Error("No code repository path provided.")
         }
 
         for(const image of images) {
-            await new BuildImage().execute(code_repository_path, template, image)
+            await new BuildImage().execute(codeRepositoryPath, template, image)
         }
     }
 
@@ -87,17 +87,17 @@ export class InstallTemplate
 
     async createConfigFiles(template: ParsedTemplate): Promise<void>
     {
-        const config_files: ConfigFile[] = []
+        const configFiles: ConfigFile[] = []
 
         for(const resource of template.template.deployment) {
             if(resource.type !== 'config_file') continue
-            config_files.push(resource)
+            configFiles.push(resource)
         }
 
-        if(config_files.length === 0) return
+        if(configFiles.length === 0) return
 
-        for(const config_file of config_files) {
-            fs.writeFileSync(`${this.directory.name}/${config_file.id}`, config_file.contents)
+        for(const configFile of configFiles) {
+            fs.writeFileSync(`${this.directory.name}/${configFile.id}`, configFile.contents)
         }
     }
 
@@ -109,11 +109,11 @@ export class InstallTemplate
 
             if(resource.type !== 'entrypoint') return
 
-            const min_port = 50000
-            const max_port = 65353
-            const random_port = Math.floor(Math.random() * (max_port - min_port) ) + min_port
+            const minPort = 50000
+            const maxPort = 65353
+            const randomPort = Math.floor(Math.random() * (maxPort - minPort) ) + minPort
 
-            resource.host_port = random_port
+            resource.host_port = randomPort
 
             entrypoints.push(resource)
 

@@ -36,16 +36,15 @@ export default class SmoothyApi {
     }
 
     async parseTemplate(
-        application_slug: string, service_name: string, template: ParsedTemplate, deployment_type: string, 
-        variables: Variables, environment: Variables
+        applicationSlug: string, serviceName: string, template: ParsedTemplate, variables: Variables, 
+        environment: Variables
     ): Promise<ParsedTemplate>
     {
         try {
             const response = await axios.post(`${this.host}/v1/service-templates/local/parse`, {
-                template, 
-                deployment_type,
-                application_slug, 
-                service_name, 
+                template,
+                application_slug: applicationSlug, 
+                service_name: serviceName, 
                 variables,
                 environment_variables: environment,
             })

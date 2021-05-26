@@ -15,41 +15,41 @@ class ZipTemplate
         this.directory = tmp.dirSync()
     }
 
-    async execute(template_path: string): Promise<Directory>
+    async execute(templatePath: string): Promise<Directory>
     {
-        await this.copyLatestVersionToDirectory(template_path)
-        await this.copyTaggedVersionsToDirectory(template_path)
+        await this.copyLatestVersionToDirectory(templatePath)
+        await this.copyTaggedVersionsToDirectory(templatePath)
         await this.zipContentsOfDirectory()
         return this.directory
     }
 
-    async copyLatestVersionToDirectory(template_path: string): Promise<void>
+    async copyLatestVersionToDirectory(templatePath: string): Promise<void>
     {
-        await exec(`cd ${this.directory.name} && rsync -a ${template_path}/template latest`);
+        await exec(`cd ${this.directory.name} && rsync -a ${templatePath}/template latest`);
     }
 
-    async copyTaggedVersionsToDirectory(template_path: string): Promise<void>
+    async copyTaggedVersionsToDirectory(templatePath: string): Promise<void>
     {
-        const repository_path = path.resolve(template_path, '../../')
-        const template_name = path.basename(template_path)
-        const tags: string[] = await this.getTags(repository_path, template_name)
+        const repositoryPath = path.resolve(templatePath, '../../')
+        const templateName = path.basename(templatePath)
+        const tags: string[] = await this.getTags(repositoryPath, templateName)
 
         for(const tag of tags) {
 
-            const version = tag.replace(`${template_name}-`, '')
-            const escaped_template_path = escape(`${this.directory.name}/${version}/templates/${template_name}`)
+            const version = tag.replace(`${templateName}-`, '')
+            const escapedTemplatePath = escape(`${this.directory.name}/${version}/templates/${templateName}`)
             
-            await exec(`git clone --depth 1 --branch ${tag} ${repository_path} ${this.directory.name}/${version}`)
-            await exec(`find ${this.directory.name}/${version} -mindepth 1 ! -regex '^${escaped_template_path}.*' -delete`)
-            await exec(`mv ${this.directory.name}/${version}/templates/${template_name}/* ${this.directory.name}/${version}`)
+            await exec(`git clone --depth 1 --branch ${tag} ${repositoryPath} ${this.directory.name}/${version}`)
+            await exec(`find ${this.directory.name}/${version} -mindepth 1 ! -regex '^${escapedTemplatePath}.*' -delete`)
+            await exec(`mv ${this.directory.name}/${version}/templates/${templateName}/* ${this.directory.name}/${version}`)
             await exec(`rm -r ${this.directory.name}/${version}/templates`)
             
         }
     }
 
-    async getTags(repository_path: string, template_name: string): Promise<string[]>
+    async getTags(repositoryPath: string, templateName: string): Promise<string[]>
     {
-        const output = await exec(`git -C ${repository_path} tag | cat`)
+        const output = await exec(`git -C ${repositoryPath} tag | cat`)
 
         if(output.stderr) {
             throw output.stderr
@@ -57,7 +57,7 @@ class ZipTemplate
 
         const tags = output.stdout.split("\n").filter((item: string) => {
 
-            return new RegExp(`^${template_name}-\\d+\\.\\d+\\.\\d+$`).test(item)
+            return new RegExp(`^${templateName}-\\d+\\.\\d+\\.\\d+$`).test(item)
 
         })
 

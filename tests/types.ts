@@ -8,7 +8,7 @@ export interface ImportedTemplate {
 }
 
 export interface PrivateTemplateDetails {
-    deployment_type: "docker_server" | "kubernetes_cluster";
+    cloud_service_type: "docker_server" | "kubernetes_cluster";
     meta: Record<string, any>;
     versions: string[];
     private?: boolean;

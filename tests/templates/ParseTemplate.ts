@@ -5,20 +5,20 @@ import { ParsedTemplate, Variables } from '@/types'
 export class ParseTemplate 
 {
     async execute(
-        application_slug: string, service_name: string, template_path: string, template_version: string, 
+        applicationSlug: string, serviceName: string, templatePath: string, templateVersion: string, 
         variables: Variables, environment: Variables
     ): Promise<ParsedTemplate>
     {
-        const template = await (new ImportTemplate).execute(template_path, 'kubernetes_cluster')
+        const template = await (new ImportTemplate).execute(templatePath)
 
-        if(!(template_version in template.versions)) {
+        if(!(templateVersion in template.versions)) {
             throw "Non existing version"
         }
 
-        const versioned_template = template.versions[template_version]
+        const versionedTemplate = template.versions[templateVersion]
 
         return await (new SmoothyApi).parseTemplate(
-            application_slug, service_name, versioned_template, 'kubernetes_cluster', variables, environment
+            applicationSlug, serviceName, versionedTemplate, variables, environment
         )
     }
 }

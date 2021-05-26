@@ -12,11 +12,11 @@ class CreateVolume
 
     async execute(volume: Volume)
     {
-        const docker_volumes: Docker.VolumeInspectInfo[] = (await this.docker.listVolumes()).Volumes
+        const dockerVolumes: Docker.VolumeInspectInfo[] = (await this.docker.listVolumes()).Volumes
 
-        const volume_exists: boolean = docker_volumes.map(volume => volume.Name).includes(volume.id)
+        const volumeExists: boolean = dockerVolumes.map(volume => volume.Name).includes(volume.id)
 
-        if(volume_exists) return
+        if(volumeExists) return
 
         await this.docker.createVolume({ Name: volume.id })
     }
