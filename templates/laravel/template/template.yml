@@ -1,0 +1,402 @@
+api: v1
+
+meta:
+  name: Laravel
+  description: The PHP Framework for Web Artisans
+
+form:
+
+  - name: Source code
+    questions:
+
+      - type: file_path
+        name: Path to Laravel source code
+        description: >
+          The directory in your Git repository that contains the source code of your service.
+        variable: path_to_source_code
+        required: false
+        default: ''
+
+      - type: file_paths
+        name: Paths to shared libraries
+        description: >
+          Some services require, in addition to their source code, the presence of a shared library 
+          that is stored in the Git repository outside of the source directory. For example
+          in "libraries/ui-components/" instead of "services/laravel/". If your service depends on
+          one or more shared libraries, you should specify their paths in the Git repository here.
+        variable: paths_to_shared_libraries
+        required: false
+        
+      - type: select
+        name: PHP version
+        description: >
+          The PHP version that your service is written in.
+        required: true
+        variable: php_version
+        options:
+          - name: "7.4"
+            value: "7.4"
+
+  - name: Dependencies
+    questions:
+
+      - type: structs
+        name: Private composer registries
+        description: >
+          If your Laravel service depends on packages that are hosted on a private Composer registry you can 
+          specify the registries here. Smoothy will configure Composer to authenticate with the registries before
+          installing the packages.
+        variable: private_composer_registries
+        questions:
+          - type: string
+            name: URL
+            description: The URL of the private registry.
+            variable: url
+            required: true
+          - type: string
+            name: Username
+            description: The username that will be used to authenticate with the private registry.
+            variable: username
+            required: true
+          - type: password
+            name: Password
+            description: The password that will be used to authenticate with the private registry.
+            variable: password
+            required: true
+
+      - type: code
+        name: Additional software
+        description: >
+          If your Laravel service requires some additional Linux packages or software to be installed,
+          you can specify their installation script here. Within the script, you can use any default 
+          Linux Debian utility, including the apt package manager. Multi-line commands and comments
+          are not allowed.
+        variable: additional_software_script
+
+  - name: Configuration
+    questions:
+
+      - type: timezone
+        name: Timezone
+        description: >
+          Specify the timezone that should be configured for your service.
+        variable: timezone
+        required: true
+        
+      - type: boolean
+        name: OPcache
+        description: >
+          PHP's OPcode caching system can drastically improve the speed of your Laravel service. Specify whether
+          or not you want to enable OPcache for your service.
+        variable: opcache_enabled
+
+      - type: integer
+        name: Maximum file upload size
+        description: >
+          Specify the maximum allowed file upload size in megabytes (MB) for your service.
+        variable: maximum_file_upload_size
+        default: 2
+
+  - name: Storage
+    questions:
+
+      - type: boolean
+        name: Persistent storage
+        description: >
+          By default, any data that is stored in the storage folder of your Laravel service is volatile.
+          The storage folder isn't shared across multiple replicas of the service and its contents are deleted
+          upon every new deployment. If you want to persist the contents of the storage folder, you can enable
+          this option. A cloud-based volume will then be obtained from your cloud provider and will be used
+          to store the data.
+        variable: persistent_storage
+
+      - type: integer
+        name: Persistent storage size
+        description: >
+          The size of the volume that Smoothy will obtain from your cloud provider, expressed in gigabytes.
+          Please note that when the size of the volume is changed later on, the existing volume is replaced
+          with a new one and its contents are deleted.
+        variable: persistent_storage_size
+        default: 2
+        if: "{{ variable.persistent_storage }}"
+
+  - name: Background processing
+    questions:
+
+      - type: boolean
+        name: Laravel scheduler
+        description: >
+          Specify whether your Laravel service uses the scheduler to execute periodic tasks. Smoothy will
+          configure your service to automatically run <code>php artisan schedule:run</code> every minute.
+        variable: run_scheduler
+
+      - type: list
+        name: Daemons
+        description: >
+          Daemons are processes that you start once and keep running until you explicitly tell them to. A few
+          Laravel specific commands that should be executed as daemons are <code>php artisan queue:work</code>
+          and <code>php artisan horizon</code>. If your Laravel service uses daemon processes, you
+          can specify them here.
+        variable: daemons
+        options:
+          - name: "php artisan horizon"
+            value: "php artisan horizon"
+          - name: "php artisan queue:work"
+            value: "php artisan queue:work"
+
+  - name: Assets
+    questions:
+
+      - type: boolean
+        name: Compile assets
+        description: >
+          Chances are your Laravel service contains JavaScript and CSS assets that need to be compiled before they
+          can be deployed. When this is the case, enable this option.
+        variable: build_assets
+
+      - type: select
+        name: Package manager
+        description: >
+          The package manager that should be used to install the JavaScript dependencies of your service.
+        variable: package_manager
+        required: true
+        options:
+          - name: NPM
+            value: npm
+          - name: Yarn
+            value: yarn
+        default: npm
+        if: "{{ variable.build_assets }}"
+
+      - type: code
+        name: Compile assets script
+        description: >
+          You can provide the necessary commands to compile the assets of your Laravel service. Upon every
+          release, Smoothy will run these commands in a Node.js environment and copy the compiled assets
+          into the <code>public</code> folder of your service.
+        variable: build_assets_script
+        required: true
+        default:
+          switch:
+            - case: "{{ variable.package_manager == 'npm' }}"
+              value: npm run production
+            - case: "{{ variable.package_manager == 'yarn' }}"
+              value: yarn run production
+        if: "{{ variable.build_assets }}"
+
+      - type: code
+        name: Deploy script
+        description: >
+          Whenever a new instance of the service is deployed, this script will be run. This makes it the
+          perfect place to run actions that impact only a single instance of the service. For example: 
+          caching the local configuration or adding a symlink between two folders.
+        variable: deploy_script
+        default: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          rm -f public/storage
+          php artisan storage:link
+
+      - type: code
+        name: Release script
+        description: >
+          Whenever a new version of the service is released, this script will be run. This makes it the
+          perfect place to run actions that impact multiple instances of the service. For example:
+          connecting to a shared database and running a migration script.
+        variable: release_script
+        default: |
+          sleep 60s
+          php artisan migrate --force
+
+deployment:
+
+  - type: image
+    name: laravel
+    dockerfile: php/Dockerfile
+    arguments:
+      - name: PRIVATE_COMPOSER_REGISTRY_URL_{{ loop.key }}
+        value: "{{ loop.value.url }}"
+        loop: "{{ variable.private_composer_registries }}"
+      - name: PRIVATE_COMPOSER_REGISTRY_USERNAME_{{ loop.key }}
+        value: "{{ loop.value.username }}"
+        loop: "{{ variable.private_composer_registries }}"
+      - name: PRIVATE_COMPOSER_REGISTRY_PASSWORD_{{ loop.key }}
+        value: "{{ loop.value.password }}"
+        loop: "{{ variable.private_composer_registries }}"
+
+  - type: image
+    name: nginx
+    dockerfile: nginx/Dockerfile
+
+  - type: volume
+    name: storage
+    size: "{{ variable.persistent_storage_size }}"
+    if: "{{ variable.persistent_storage }} "
+
+  - type: stateless_set
+    name: laravel
+    containers:
+      - name: laravel
+        image: "{* image.laravel *}"
+        volume_mounts:
+          - volume: "{* volume.storage *}"
+            mount_path: "{{ path('/var/www/', variable.path_to_source_code, '/storage') }}"
+            if: "{{ variable.persistent_storage }} "
+        environment:
+          - map: "{{ environment }}"
+          - name: TIMEZONE
+            value: "{{ variable.timezone }}"
+          - name: MAX_FILE_UPLOAD
+            value: "{{ variable.maximum_file_upload_size }}"
+          - name: OPCACHE
+            value: "{{ variable.opcache_enabled }}"
+        memory:
+          min: 256
+          max: 256
+        cpus:
+          min: 250
+          max: 250
+
+  - type: stateless_set
+    name: "daemon_{{ loop.key }}"
+    containers:
+      - name: laravel
+        image: "{* image.laravel *}"
+        command: "{{ loop.value }}"
+        volume_mounts:
+          - volume: "{* volume.storage *}"
+            mount_path: "{{ path('/var/www/', variable.path_to_source_code, '/storage') }}"
+            if: "{{ variable.persistent_storage }} "
+        environment:
+          - map: "{{ environment }}"
+          - name: TIMEZONE
+            value: "{{ variable.timezone }}"
+        memory:
+          min: 256
+          max: 256
+        cpus:
+          min: 250
+          max: 250
+    loop: "{{ variable.daemons }}"
+
+  - type: cron_job
+    name: scheduler
+    schedule: "* * * * *"
+    containers:
+      - name: laravel
+        image: "{* image.laravel *}"
+        command: php {{ path('/var/www', variable.path_to_source_code, '/artisan') }} schedule:run
+        volume_mounts:
+          - volume: "{* volume.storage *}"
+            mount_path: "{{ path('/var/www/', variable.path_to_source_code, '/storage') }}"
+            if: "{{ variable.persistent_storage }} "
+        environment:
+          - map: "{{ environment }}"
+          - name: TIMEZONE
+            value: "{{ variable.timezone }}"
+        memory:
+          min: 256
+          max: 256
+        cpus:
+          min: 250
+          max: 250
+    if: "{{ variable.run_scheduler }}"
+
+  - type: stateless_set
+    name: nginx
+    containers:
+      - name: nginx
+        image: "{* image.nginx *}"
+        volume_mounts:
+          - volume: "{* volume.storage *}"
+            mount_path: "{{ path('/var/www/', variable.path_to_source_code, '/storage') }}"
+            if: "{{ variable.persistent_storage }} "
+        environment:
+          - name: MAX_FILE_UPLOAD
+            value: "{{ variable.maximum_file_upload_size }}"
+        memory:
+          min: 256
+          max: 256
+        cpus:
+          min: 250
+          max: 250
+
+  - type: config_file
+    name: init
+    source: php/init.sh
+    if: "{{ variable.release_script }}"
+
+  - type: job
+    name: init
+    containers:
+      - name: laravel
+        image: "{* image.laravel *}"
+        command: bash /init.sh
+        config_file_mounts:
+          - config_file: "{* config_file.init *}"
+            mount_path: /init.sh
+        volume_mounts:
+          - volume: "{* volume.storage *}"
+            mount_path: "{{ path('/var/www/', variable.path_to_source_code, '/storage') }}"
+            if: "{{ variable.persistent_storage }} "
+        environment:
+          - map: "{{ environment }}"
+          - name: TIMEZONE
+            value: "{{ variable.timezone }}"
+        memory:
+          min: 256
+          max: 256
+        cpus:
+          min: 250
+          max: 250
+    if: "{{ variable.release_script }}"
+
+  - type: entrypoint
+    name: php
+    alias: PHP
+    target: "{* stateless_set.laravel *}"
+    port: 9000
+  
+  - type: entrypoint
+    name: nginx
+    alias: NGINX
+    target: "{* stateless_set.nginx *}"
+    port: 8080
+
+interface:
+
+  - type: shared_variable
+    name: LARAVEL_HOST
+    value: "{{ entrypoint.nginx.host }}"
+
+  - type: shared_variable
+    name: LARAVEL_PORT
+    value: "{{ entrypoint.nginx.port }}"
+
+  - type: files
+    name: Storage
+    volume: "{* volume.storage *}"
+
+  - type: logs
+    name: NGINX
+    source: "{* stateless_set.nginx *}"
+
+  - type: logs
+    name: Init script
+    source: "{* job.init *}"
+    if: "{{ variable.release_script }}"
+
+  - type: logs
+    name: Laravel
+    source: "{* stateless_set.laravel *}"
+
+  - type: logs
+    name: Scheduler
+    source: "{* cron_job.scheduler *}"
+    if: "{{ variable.run_scheduler }}"
+
+  - type: logs
+    name: "Daemon: {{ loop.value }}"
+    source: "{* stateless_set.daemon_{{ loop.key }} *}"
+    loop: "{{ variable.daemons }}"
