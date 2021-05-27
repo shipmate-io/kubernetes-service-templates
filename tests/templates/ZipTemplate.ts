@@ -15,12 +15,12 @@ class ZipTemplate
         this.directory = tmp.dirSync()
     }
 
-    async execute(templatePath: string): Promise<Directory>
+    async execute(templatePath: string): Promise<string>
     {
         await this.copyLatestVersionToDirectory(templatePath)
         await this.copyTaggedVersionsToDirectory(templatePath)
         await this.zipContentsOfDirectory()
-        return this.directory
+        return `${this.directory.name}/template.zip`
     }
 
     async copyLatestVersionToDirectory(templatePath: string): Promise<void>

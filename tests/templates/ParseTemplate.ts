@@ -2,7 +2,6 @@ import fs from 'fs'
 import FormData from 'form-data'
 import SmoothyApi from '@/api/SmoothyApi'
 import ZipTemplate from '@/templates/ZipTemplate'
-import { DirResult as Directory } from 'tmp'
 import { ParsedTemplate, ImportedTemplate, Variables } from '@/types'
 
 export class ParseTemplate 
@@ -12,7 +11,7 @@ export class ParseTemplate
         variables: Variables, environment: Variables
     ): Promise<ParsedTemplate>
     {
-        const pathToZipFile = await this.zipTemplate(templatePath)
+        const pathToZipFile = await (new ZipTemplate).execute(templatePath)
         const importedTemplate = await this.importTemplate(pathToZipFile)
 
         if(!(templateVersion in importedTemplate.versions)) {
@@ -22,13 +21,6 @@ export class ParseTemplate
         const template = importedTemplate.versions[templateVersion]
 
         return await (new SmoothyApi).parseTemplate(applicationName, serviceName, template, variables, environment)
-    }
-
-    private async zipTemplate(templatePath: string): Promise<string>
-    {
-        const directoryWithZippedTemplate: Directory = await (new ZipTemplate).execute(templatePath)
-
-        return `${directoryWithZippedTemplate.name}/template.zip`;
     }
 
     private async importTemplate(pathToZipFile: string): Promise<ImportedTemplate>
