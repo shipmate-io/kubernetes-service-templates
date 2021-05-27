@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import fs from 'fs'
 import YAML from 'yaml'
-import ValidateTemplate from './templates/ValidateTemplate'
+import ValidateTemplate from '../templates/ValidateTemplate'
 import ApiError from '@/api/ApiError';
 import { ParsedTemplate } from '@/types'
 import { Template } from 'tests'

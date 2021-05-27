@@ -58,7 +58,7 @@
     "preset": "jest-puppeteer",
     "setupFilesAfterEnv": [
       "jest-extended",
-      "<rootDir>/tests/setupTests.ts"
+      "<rootDir>/tests/assertions/setupTests.ts"
     ],
     "transform": {
       "^.+\\.(ts|tsx)?$": "ts-jest",

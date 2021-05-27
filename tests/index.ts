@@ -7,7 +7,6 @@ import 'jest-extended'
 export class Template
 {
     templatePath: string
-    parsedTemplate?: ParsedTemplate
 
     constructor(templatePath: string)
     {
@@ -26,17 +25,27 @@ export class Template
     async install(
         codeRepositoryPath: string|null, variables: Variables = {}, environment: Variables = {}, 
         initializationTimeInSeconds: number = 10
-    ): Promise<void>
+    ): Promise<Service>
     {
-        this.parsedTemplate = await (new InstallTemplate).execute(
+        const parsedTemplate = await (new InstallTemplate).execute(
             codeRepositoryPath, this.templatePath, 'latest', variables, environment, initializationTimeInSeconds
         )
+
+        return new Service(parsedTemplate)
+    }
+}
+
+class Service
+{
+    parsedTemplate: ParsedTemplate
+
+    constructor(parsedTemplate: ParsedTemplate)
+    {
+        this.parsedTemplate = parsedTemplate
     }
     
     getStatelessSet(name: string): StatelessSet|null
     {
-        if(! this.parsedTemplate) return null
-
         for(const resource of this.parsedTemplate.template.deployment) {
             if(resource.type !== 'stateless_set') continue
             if(resource.name === name) return resource
@@ -47,8 +56,6 @@ export class Template
 
     getEntrypoint(name: string): Entrypoint|null
     {
-        if(! this.parsedTemplate) return null
-
         for(const resource of this.parsedTemplate.template.deployment) {
             if(resource.type !== 'entrypoint') continue
             if(resource.name === name) return resource
@@ -59,8 +66,6 @@ export class Template
 
     async uninstall(): Promise<void>
     {
-        if(! this.parsedTemplate) return
-
         return await (new UninstallTemplate).execute(this.parsedTemplate)
     }
 }

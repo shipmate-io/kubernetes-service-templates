@@ -42,11 +42,11 @@ test("the service works correctly when installed", async () => {
         'path_to_source_code': 'src/',
     }
 
-    await htmlTemplate.install(codeRepositoryPath, variables)
+    const service = await htmlTemplate.install(codeRepositoryPath, variables)
 
     try {
 
-        const host = `http://localhost:${htmlTemplate.getEntrypoint('html')?.host_port}`
+        const host = `http://localhost:${service.getEntrypoint('html')?.host_port}`
 
         expect((await page.goto(`${host}/`))?.status()).toBe(200)
         expect(page.url()).toEqual(`${host}/`)
@@ -77,7 +77,7 @@ test("the service works correctly when installed", async () => {
         expect(await page.content()).toContain('Woops, page not found!')
 
     } finally {
-        await htmlTemplate.uninstall()
+        await service.uninstall()
     }
 
 }, 1000 * 60 * 3)
