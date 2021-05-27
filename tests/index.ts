@@ -1,38 +1,11 @@
-import fs from 'fs'
-import YAML from 'yaml'
 import ParseTemplate from './templates/ParseTemplate'
-import ValidateTemplate from './templates/ValidateTemplate'
 import InstallTemplate from './templates/InstallTemplate'
 import UninstallTemplate from './templates/UninstallTemplate'
 import { Entrypoint, ParsedTemplate, Variables, StatelessSet } from '@/types'
 import 'jest-extended'
 
-function assertThatObjectsAreEqual(actual: any, expected: any): void
+export class Template
 {
-    if(typeof expected === 'object' && typeof actual === 'object') {
-        const actualProperties = Object.keys(actual)
-        const expectedProperties = Object.keys(expected)
-        expect(actualProperties).toEqual(expect.arrayContaining(expectedProperties));
-        
-        expectedProperties.forEach(expectedProperty => {
-            const actualValue = actual[expectedProperty]
-            const expectedValue = expected[expectedProperty] 
-            assertThatObjectsAreEqual(actualValue, expectedValue)
-        })
-
-        return
-    }
-
-    if(typeof expected === 'string' && typeof actual === 'string') {
-        expect(actual.trim()).toBe(expected.trim());
-        return
-    }
-    
-    expect(actual).toBe(expected)
-}
-
-export class Template {
-
     templatePath: string
     parsedTemplate?: ParsedTemplate
 
@@ -48,13 +21,6 @@ export class Template {
         return await (new ParseTemplate).execute(
             applicationSlug, serviceName, this.templatePath, 'latest', variables, environment
         )
-    }
-    
-    async assertThatSyntaxIsValid(): Promise<void>
-    {
-        const error =  await (new ValidateTemplate).execute(this.templatePath)
-
-        expect(error).toBe(null)
     }
     
     async install(
@@ -97,20 +63,9 @@ export class Template {
 
         return await (new UninstallTemplate).execute(this.parsedTemplate)
     }
-
 }
 
 export const utils = {
-
-    readParsedTemplateFile: function(filePath: string): any
-    {
-        return YAML.parse(fs.readFileSync(filePath).toString())
-    },
-
-    assertThatTemplatesAreEqual: function(actualTemplate: ParsedTemplate, expectedTemplate: ParsedTemplate): void
-    {
-        assertThatObjectsAreEqual(actualTemplate, expectedTemplate)
-    },
 
     sleep: async function(seconds: number): Promise<void>
     {
