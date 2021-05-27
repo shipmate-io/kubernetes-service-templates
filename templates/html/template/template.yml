@@ -2,7 +2,7 @@ api: v1
 
 meta:
   name: HTML
-  description: Static HTML website
+  description: Deploy your static HTML website on a Kubernetes cluster.
 
 form:
 
@@ -13,8 +13,8 @@ form:
         description: >
           The directory in your Git repository that contains your static HTML files.
         variable: path_to_source_code
-        required: true
         type: file_path
+        default: /
 
 deployment:
 
