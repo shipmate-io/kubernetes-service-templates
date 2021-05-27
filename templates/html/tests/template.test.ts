@@ -1,6 +1,5 @@
-import { Template, utils } from 'tests'
+import { Template } from 'tests'
 import path from 'path'
-import ApiError from '@/api/ApiError';
 
 const htmlTemplate = new Template(path.resolve(__dirname, '../'))
 
@@ -12,19 +11,13 @@ test('the syntax of the template is valid', async () => {
 
 test('the template cannot be parsed without path_to_source_code', async () => {
 
-    let thrownError
-
-    try {
-        await htmlTemplate.parse('app', 'website')
-    } catch (error) {
-        thrownError = error
+    const expectedErrors = {
+        path_to_source_code: [ 'The path to html source code field is required.' ],
     }
 
-    expect(thrownError).toBeInstanceOf(ApiError)
-    expect(thrownError.status).toBe(422)
-    expect(thrownError.errors).toMatchObject({
-        path_to_source_code: [ 'The path to html source code field is required.' ],
-    })
+    const parsing = htmlTemplate.parse('app', 'website')
+
+    await expect(parsing).toFailDueToIncorrectFormInput(expectedErrors)
 
 })
 
@@ -34,11 +27,10 @@ test('the template can be parsed', async () => {
         'path_to_source_code': 'src/',
     }
 
-    const actualTemplate = await htmlTemplate.parse('app', 'website', variables)
+    const parsing = await htmlTemplate.parse('app', 'website', variables)
 
-    const expectedTemplate = utils.readParsedTemplateFile(__dirname+'/concerns/parsed_template.yml')
-
-    utils.assertThatTemplatesAreEqual(actualTemplate, expectedTemplate)
+    await expect(parsing).toSucceed()
+    await expect(parsing).toMatchParsedTemplate(__dirname+'/concerns/parsed_template.yml')
 
 })
 

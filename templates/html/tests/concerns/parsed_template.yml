@@ -102,4 +102,6 @@ template:
 
     - type: logs
       name: NGINX
-      container: app_service_website_container_html
+      source:
+        type: stateless_set
+        id: website-stateless-set-html
