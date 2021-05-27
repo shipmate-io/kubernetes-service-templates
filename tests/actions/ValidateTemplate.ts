@@ -1,7 +1,7 @@
 import fs from 'fs'
 import FormData from 'form-data'
 import SmoothyApi from '@/api/SmoothyApi'
-import ZipTemplate from '@/templates/ZipTemplate'
+import ZipTemplate from '@/actions/ZipTemplate'
 import ApiError from '@/api/ApiError'
 
 export class ValidateTemplate
