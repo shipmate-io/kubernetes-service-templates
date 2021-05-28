@@ -29,9 +29,9 @@ deployment:
         image: "{* image.html *}"
         memory:
           min: 32
-          max: 128
+          max: 256
         cpus:
-          min: 250
+          min: 50
           max: 500
 
   - type: entrypoint
