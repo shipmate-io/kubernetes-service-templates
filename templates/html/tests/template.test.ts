@@ -34,7 +34,7 @@ test('the template can be parsed with path_to_source_code', async () => {
 
 test("the service works correctly when installed without path_to_source_code", async () => {
 
-    const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
+    const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/src/')
 
     const service = await htmlTemplate.install(codeRepositoryPath)
 

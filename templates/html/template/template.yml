@@ -43,5 +43,5 @@ deployment:
 interface:
 
   - type: logs
-    name: NGINX
+    name: NGINX error logs
     source: "{* stateless_set.html *}"
