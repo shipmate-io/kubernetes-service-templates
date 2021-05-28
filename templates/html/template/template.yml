@@ -2,7 +2,7 @@ api: v1
 
 meta:
   name: HTML
-  description: Static HTML website
+  description: Deploy your static HTML website on a Kubernetes cluster.
 
 form:
 
@@ -13,8 +13,8 @@ form:
         description: >
           The directory in your Git repository that contains your static HTML files.
         variable: path_to_source_code
-        required: true
         type: file_path
+        default: /
 
 deployment:
 
@@ -29,9 +29,9 @@ deployment:
         image: "{* image.html *}"
         memory:
           min: 32
-          max: 128
+          max: 256
         cpus:
-          min: 250
+          min: 50
           max: 500
 
   - type: entrypoint
@@ -43,5 +43,5 @@ deployment:
 interface:
 
   - type: logs
-    name: NGINX
+    name: NGINX error logs
     source: "{* stateless_set.html *}"

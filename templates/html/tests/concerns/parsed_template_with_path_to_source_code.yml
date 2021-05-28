@@ -4,7 +4,7 @@ files:
     FROM smoothy/nginx:1.19-1.0.0
 
     COPY server.conf /etc/nginx/conf.d/server.conf
-    COPY code-repository/src /usr/share/nginx/html/src
+    COPY code-repository/src/ /usr/share/nginx/html/src/
 
   server.conf: |-
     server {
@@ -12,7 +12,7 @@ files:
         listen [::]:8080 default ipv6only=on;
         server_name _;
 
-        root /usr/share/nginx/html/src;
+        root /usr/share/nginx/html/src/;
         index index.html index.htm;
         error_page 404 /404.html;
         charset utf-8;
@@ -102,4 +102,6 @@ template:
 
     - type: logs
       name: NGINX
-      container: app_service_website_container_html
+      source:
+        type: stateless_set
+        id: website-stateless-set-html

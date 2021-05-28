@@ -1,19 +1,18 @@
-import { DirResult as Directory } from 'tmp'
 import fs from 'fs'
 import FormData from 'form-data'
 import SmoothyApi from '@/api/SmoothyApi'
-import ZipTemplate from '@/templates/ZipTemplate'
+import ZipTemplate from '@/actions/ZipTemplate'
 import ApiError from '@/api/ApiError'
 
 export class ValidateTemplate
 {
     async execute(templatePath: string): Promise<ApiError|null>
     {
-        const directory: Directory = await (new ZipTemplate).execute(templatePath)
+        const pathToZipFile: string = await (new ZipTemplate).execute(templatePath)
 
         const form = new FormData()
         
-        form.append('template', fs.createReadStream(`${directory.name}/template.zip`))
+        form.append('template', fs.createReadStream(pathToZipFile))
 
         try {
             await (new SmoothyApi).validateTemplate(form)
