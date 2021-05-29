@@ -2,7 +2,7 @@ api: v1
 
 meta:
   name: Vue CLI
-  description: The Progressive JavaScript Framework
+  description: Deploy your Vue.js service built with Vue CLI on a Kubernetes cluster.
 
 form:
 
@@ -13,7 +13,6 @@ form:
         description: >
           The directory in your Git repository that contains the source code of your service.
         variable: path_to_source_code
-        required: false
         type: file_path
         default: ''
 
@@ -62,7 +61,7 @@ form:
         variable: path_to_built_source_code
         required: true
         type: file_path
-        default: 'dist/'
+        default: dist/
 
 deployment:
 
@@ -93,5 +92,5 @@ deployment:
 interface:
 
   - type: logs
-    name: NGINX
+    name: NGINX error logs
     source: "{* stateless_set.vue *}"

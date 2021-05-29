@@ -1,31 +1,25 @@
-import { Template, utils } from 'tests'
+import { Template } from 'tests'
 import path from 'path'
-import ApiError from '@/api/ApiError';
 
-const vue_template = new Template(path.resolve(__dirname, '../'))
+const vueCliTemplate = new Template(path.resolve(__dirname, '../'))
 
 test('the template is valid', async () => {
 
-    await vue_template.assertThatSyntaxIsValid()
+    await expect(vueCliTemplate).toHaveValidSyntax();
 
 })
 
-test('the template cannot be parsed without package_manager and build_script', async () => {
+test('the template cannot be parsed without the necessary variables', async () => {
 
-    let thrown_error
+    const parsing = vueCliTemplate.parse('app', 'website');
 
-    try {
-        await vue_template.parse('app', 'website')
-    } catch (error) {
-        thrown_error = error
-    }
-
-    expect(thrown_error).toBeInstanceOf(ApiError)
-    expect(thrown_error.status).toBe(422)
-    expect(thrown_error.errors).toMatchObject({
+    const expectedErrors = {
         package_manager: [ 'The package manager field is required.' ],
         build_script: [ 'The build script field is required.' ],
-    })
+        path_to_built_source_code: [ 'The path to built source code field is required.' ],
+    };
+
+    await expect(parsing).toFailDueToIncorrectFormInput(expectedErrors)
 
 })
 
@@ -44,12 +38,11 @@ describe('the template can be parsed', () => {
             'VUE_APP_API_HOST': 'abc123',
             'VUE_APP_STRIPE_KEY': 'xyz789',
         }
-        
-        const actual_template = await vue_template.parse('app', 'website', variables, environment)
-    
-        const expected_template = utils.readParsedTemplateFile(__dirname+'/concerns/parsed_templates/npm.yml')
-    
-        utils.assertThatTemplatesAreEqual(actual_template, expected_template)
+
+        const parsing = vueCliTemplate.parse('app', 'website', variables, environment);
+
+        expect(parsing).toSucceed();
+        expect(parsing).toMatchParsedTemplate(__dirname+'/concerns/parsed_templates/npm.yml');
 
     })
   
@@ -61,12 +54,11 @@ describe('the template can be parsed', () => {
             'build_script': "yarn run build",
             'path_to_built_source_code': 'dist/',
         }
-        
-        const actual_template = await vue_template.parse('app', 'website', variables)
-    
-        const expected_template = utils.readParsedTemplateFile(__dirname+'/concerns/parsed_templates/yarn.yml')
-    
-        utils.assertThatTemplatesAreEqual(actual_template, expected_template)
+
+        const parsing = vueCliTemplate.parse('app', 'website', variables);
+
+        expect(parsing).toSucceed();
+        expect(parsing).toMatchParsedTemplate(__dirname+'/concerns/parsed_templates/yarn.yml');
 
     })
   
@@ -76,7 +68,7 @@ describe("the service works correctly when installed", () => {
 
     test('with npm as package manager', async () => {
         
-        const code_repository_path = path.resolve(__dirname, 'concerns/application/')
+        const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
 
         const variables = {
             'path_to_source_code': 'vue/',
@@ -89,34 +81,34 @@ describe("the service works correctly when installed", () => {
             'VUE_APP_KEY': 'abc123',
         }
 
-        await vue_template.install(code_repository_path, variables, environment)
+        const vueCliService = await vueCliTemplate.install(codeRepositoryPath, variables, environment)
 
         try {
+            
+            const host = `http://localhost:${vueCliService.getEntrypoint('vue')?.host_port}`;
 
-            const host = `http://localhost:${vue_template.getEntrypoint('vue')?.host_port}`
+            expect((await page.goto(`${host}/`))?.status()).toBe(200);
+            expect(page.url()).toEqual(`${host}/`);
+            expect(await page.content()).toContain('You are viewing page: foo');
+            expect(await page.content()).toContain('The application key is: abc123');
 
-            expect((await page.goto(`${host}/`))?.status()).toBe(200)
-            expect(page.url()).toEqual(`${host}/`)
-            expect(await page.content()).toContain('You are viewing page: foo')
-            expect(await page.content()).toContain('The application key is: abc123')
+            expect((await page.goto(`${host}/bar`))?.status()).toBe(200);
+            expect(page.url()).toEqual(`${host}/bar`);
+            expect(await page.content()).toContain('You are viewing page: bar');
 
-            expect((await page.goto(`${host}/bar`))?.status()).toBe(200)
-            expect(page.url()).toEqual(`${host}/bar`)
-            expect(await page.content()).toContain('You are viewing page: bar')
-
-            expect((await page.goto(`${host}/baz`))?.status()).toBe(200)
-            expect(page.url()).toEqual(`${host}/404`)
-            expect(await page.content()).toContain('Oops, page not found!')
+            expect((await page.goto(`${host}/baz`))?.status()).toBe(200);
+            expect(page.url()).toEqual(`${host}/404`);
+            expect(await page.content()).toContain('Oops, page not found!');
 
         } finally {
-            await vue_template.uninstall()
+            await vueCliService.uninstall()
         }
 
     }, 1000 * 60 * 4)
 
     test('with yarn as package manager', async () => {
         
-        const code_repository_path = path.resolve(__dirname, 'concerns/application/vue/')
+        const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/vue/')
 
         const variables = {
             'path_to_source_code': '/',
@@ -125,26 +117,27 @@ describe("the service works correctly when installed", () => {
             'path_to_built_source_code': 'dist/',
         }
 
-        await vue_template.install(code_repository_path, variables)
+        const vueCliService = await vueCliTemplate.install(codeRepositoryPath, variables)
 
         try {
+            
+            const host = `http://localhost:${vueCliService.getEntrypoint('vue')?.host_port}`;
 
-            const host = `http://localhost:${vue_template.getEntrypoint('vue')?.host_port}`
+            expect((await page.goto(`${host}/`))?.status()).toBe(200);
+            expect(page.url()).toEqual(`${host}/`);
+            expect(await page.content()).toContain('You are viewing page: foo');
+            expect(await page.content()).not.toContain('The application key is: abc123');
 
-            expect((await page.goto(`${host}/`))?.status()).toBe(200)
-            expect(page.url()).toEqual(`${host}/`)
-            expect(await page.content()).toContain('You are viewing page: foo')
+            expect((await page.goto(`${host}/bar`))?.status()).toBe(200);
+            expect(page.url()).toEqual(`${host}/bar`);
+            expect(await page.content()).toContain('You are viewing page: bar');
 
-            expect((await page.goto(`${host}/bar`))?.status()).toBe(200)
-            expect(page.url()).toEqual(`${host}/bar`)
-            expect(await page.content()).toContain('You are viewing page: bar')
-
-            expect((await page.goto(`${host}/baz`))?.status()).toBe(200)
-            expect(page.url()).toEqual(`${host}/404`)
-            expect(await page.content()).toContain('Oops, page not found!')
+            expect((await page.goto(`${host}/baz`))?.status()).toBe(200);
+            expect(page.url()).toEqual(`${host}/404`);
+            expect(await page.content()).toContain('Oops, page not found!');
 
         } finally {
-            await vue_template.uninstall()
+            await vueCliService.uninstall()
         }
 
     }, 1000 * 60 * 4)
