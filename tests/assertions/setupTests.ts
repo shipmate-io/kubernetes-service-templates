@@ -8,9 +8,6 @@ import { Template } from 'tests'
 
 function assertThatObjectsAreEqual(path: string, actual: any, expected: any): string|null
 {
-    const prettyActual = JSON.stringify(actual, undefined, 2)
-    const prettyExpected = JSON.stringify(expected, undefined, 2)
-
     if(_.isObject(expected) && _.isObject(actual)) {
         const actualProperties = Object.keys(actual)
         const expectedProperties = Object.keys(expected)
@@ -18,7 +15,7 @@ function assertThatObjectsAreEqual(path: string, actual: any, expected: any): st
             .map(expectedProperty => actualProperties.includes(expectedProperty) ? null : `'${expectedProperty}'`)
             .filter(Boolean);
 
-        const context = `in ${path}\n\nActual: ${prettyActual}\n\nExpected: ${prettyExpected}`
+        let context = `in ${path}\n\nActual: ${prettify(actual)}\n\nExpected: ${prettify(expected)}`
 
         if(missingProperties.length > 0) {
             return missingProperties.length === 1
@@ -32,13 +29,14 @@ function assertThatObjectsAreEqual(path: string, actual: any, expected: any): st
             // @ts-ignore
             const expectedValue = expected[expectedProperty]
 
-            if(_.isString(actualValue) && _.isString(expectedValue)) {
-                return actualValue.trim() === expectedValue.trim()
-                    ? null
-                    : `Value '${actualValue.trim()}' does not equal '${expectedValue.trim()}' ${context}.`
+            const nestedPath = path ? `${path} > ${expectedProperty}` : expectedProperty;
+
+            let context = `in ${nestedPath}\n\nActual: ${prettify(actualValue)}\n\nExpected: ${prettify(expectedValue)}`
+
+            if(_.isString(actualValue) && _.isString(expectedValue) && actualValue.trim() !== expectedValue.trim()) {
+                return `The actual value does not equal the expected value ${context}.`
             }
 
-            const nestedPath = path ? `${path} > ${expectedProperty}` : expectedProperty;
             const output = assertThatObjectsAreEqual(nestedPath, actualValue, expectedValue)
 
             if(output !== null) {
@@ -54,6 +52,15 @@ function assertThatObjectsAreEqual(path: string, actual: any, expected: any): st
     }
 
     return _.isEqual(actual, expected) ? null : `Value '${actual}' does not equal '${expected}' in ${path}.`
+}
+
+function prettify(value: any): any
+{
+    if(_.isString(value)) {
+        return value;
+    }
+
+    return JSON.stringify(value, undefined, 2);
 }
 
 expect.extend({
