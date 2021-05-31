@@ -50,7 +50,7 @@ form:
             - case: "{{ variable.package_manager == 'yarn' }}"
               value: yarn run build
 
-      - name: Path to built source code
+      - name: Path to build
         description: The directory in which the build of the service is stored by the build script.
         variable: path_to_build
         required: true

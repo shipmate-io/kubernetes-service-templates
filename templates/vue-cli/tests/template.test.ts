@@ -16,7 +16,7 @@ test('the template cannot be parsed without the necessary variables', async () =
     const expectedErrors = {
         package_manager: [ 'The package manager field is required.' ],
         build_script: [ 'The build script field is required.' ],
-        path_to_build: [ 'The path to built source code field is required.' ],
+        path_to_build: [ 'The path to build field is required.' ],
     };
 
     await expect(parsing).toFailDueToIncorrectFormInput(expectedErrors)
