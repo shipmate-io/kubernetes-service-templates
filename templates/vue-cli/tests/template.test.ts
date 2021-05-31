@@ -16,7 +16,7 @@ test('the template cannot be parsed without the necessary variables', async () =
     const expectedErrors = {
         package_manager: [ 'The package manager field is required.' ],
         build_script: [ 'The build script field is required.' ],
-        path_to_built_source_code: [ 'The path to built source code field is required.' ],
+        path_to_build: [ 'The path to built source code field is required.' ],
     };
 
     await expect(parsing).toFailDueToIncorrectFormInput(expectedErrors)
@@ -31,7 +31,7 @@ describe('the template can be parsed', () => {
             'path_to_source_code': 'src/',
             'package_manager': 'npm',
             'build_script': "npm run build\nnpm run optimize",
-            'path_to_built_source_code': 'dist/',
+            'path_to_build': 'dist/',
         }
 
         const environment = {
@@ -41,8 +41,8 @@ describe('the template can be parsed', () => {
 
         const parsing = vueCliTemplate.parse('app', 'website', variables, environment);
 
-        expect(parsing).toSucceed();
-        expect(parsing).toMatchParsedTemplate(__dirname+'/concerns/parsed_templates/npm.yml');
+        await expect(parsing).toSucceed();
+        await expect(parsing).toMatchParsedTemplate(__dirname+'/concerns/parsed_templates/npm.yml');
 
     })
   
@@ -52,13 +52,13 @@ describe('the template can be parsed', () => {
             'path_to_source_code': '',
             'package_manager': 'yarn',
             'build_script': "yarn run build",
-            'path_to_built_source_code': 'dist/',
+            'path_to_build': 'dist/',
         }
 
         const parsing = vueCliTemplate.parse('app', 'website', variables);
 
-        expect(parsing).toSucceed();
-        expect(parsing).toMatchParsedTemplate(__dirname+'/concerns/parsed_templates/yarn.yml');
+        await expect(parsing).toSucceed();
+        await expect(parsing).toMatchParsedTemplate(__dirname+'/concerns/parsed_templates/yarn.yml');
 
     })
   
@@ -74,7 +74,7 @@ describe("the service works correctly when installed", () => {
             'path_to_source_code': 'vue/',
             'package_manager': 'npm',
             'build_script': "npm run build",
-            'path_to_built_source_code': 'dist/',
+            'path_to_build': 'dist/',
         }
 
         const environment = {
@@ -114,7 +114,7 @@ describe("the service works correctly when installed", () => {
             'path_to_source_code': '/',
             'package_manager': 'yarn',
             'build_script': "yarn run build",
-            'path_to_built_source_code': 'dist/',
+            'path_to_build': 'dist/',
         }
 
         const vueCliService = await vueCliTemplate.install(codeRepositoryPath, variables)

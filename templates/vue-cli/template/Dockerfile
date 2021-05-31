@@ -28,4 +28,4 @@ RUN {{ command }}
 FROM smoothy/nginx:1.19-1.0.0
 
 COPY server.conf /etc/nginx/conf.d/server.conf
-COPY --from=build-stage {{ path('/app/', variable.path_to_source_code, variable.path_to_built_source_code) }} /usr/share/nginx/html
+COPY --from=build-stage {{ path('/app/', variable.path_to_source_code, variable.path_to_build) }} /usr/share/nginx/html

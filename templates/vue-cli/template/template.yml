@@ -10,28 +10,24 @@ form:
     questions:
 
       - name: Path to Vue.js source code
-        description: >
-          The directory in your Git repository that contains the source code of your service.
+        description: The directory in the Git repository that contains the source code of the service.
         variable: path_to_source_code
         type: file_path
         default: ''
 
       - name: Paths to shared libraries
         description: >
-          Some services require, in addition to their source code, the presence of a shared library 
-          that is stored in the Git repository outside of the source directory. For example
-          in "libraries/ui-components/" instead of "services/vue/". If your service depends on
-          one or more shared libraries, you should specify their paths in the Git repository here.
+          If the service uses one or more shared libraries that are stored in the Git repository outside of its source 
+          directory, you should specify the absolute paths to these libraries here. 
+          For example: "/libraries/ui-components".
         variable: paths_to_shared_libraries
-        required: false
         type: file_paths
 
   - name: Building configuration
     questions:
 
       - name: Package manager
-        description: >
-          The package manager that should be used to install the dependencies of your service.
+        description: The package manager used to install the Node.js dependencies of the service.
         variable: package_manager
         required: true
         type: select
@@ -43,8 +39,7 @@ form:
         default: npm
 
       - name: Build script
-        description: >
-          The script that needs to be executed to compile the assets of your service.
+        description: The script to build the service.
         variable: build_script
         required: true
         type: code
@@ -56,9 +51,8 @@ form:
               value: yarn run build
 
       - name: Path to built source code
-        description: >
-          The directory in which the built source code of the service is stored by the build script.
-        variable: path_to_built_source_code
+        description: The directory in which the build of the service is stored by the build script.
+        variable: path_to_build
         required: true
         type: file_path
         default: dist/

@@ -27,7 +27,7 @@ files:
         server_name _;
 
         root /usr/share/nginx/html;
-        index index.html index.htm;
+        index index.html;
         error_page 404 /404.html;
         charset utf-8;
 
@@ -95,7 +95,7 @@ template:
   interface:
 
     - type: logs
-      name: NGINX
+      name: NGINX error logs
       source:
         id: website-stateless-set-vue
         type: stateless_set
