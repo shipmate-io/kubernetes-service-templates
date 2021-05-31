@@ -9,10 +9,10 @@ WORKDIR {{ path('/app/', variable.path_to_source_code) }}
 
 {% if variable.package_manager == 'npm' %}
 COPY {{ path('code-repository/', variable.path_to_source_code, '/package*.json') }} {{ path('/app/', variable.path_to_source_code, '/') }}
-RUN npm install --silent
+RUN npm install
 {% elseif variable.package_manager == 'yarn' %}
 COPY {{ path('code-repository/', variable.path_to_source_code, '/package*.json') }} {{ path('code-repository/', variable.path_to_source_code, '/yarn.*') }} {{ path('/app/', variable.path_to_source_code, '/') }}
-RUN yarn install --silent
+RUN yarn install
 {% endif %}
 
 COPY {{ path('code-repository/', variable.path_to_source_code, '/') }} {{ path('/app/', variable.path_to_source_code, '/') }}
@@ -27,5 +27,5 @@ RUN {{ command }}
 
 FROM smoothy/nginx:1.19-1.0.0
 
-COPY server.conf /etc/nginx/conf.d/server.conf
+COPY static/server.conf /etc/nginx/conf.d/server.conf
 COPY --from=build-stage {{ path('/app/', variable.path_to_source_code, variable.path_to_build) }} /usr/share/nginx/html

@@ -1,0 +1,107 @@
+files:
+
+  static/Dockerfile: |-
+    FROM node:alpine as build-stage
+
+    ARG NUXT_ENV_API_HOST
+    ARG NUXT_ENV_STRIPE_KEY
+
+    RUN mkdir -p /app/src/
+    WORKDIR /app/src/
+
+    COPY code-repository/src/package*.json /app/src/
+    RUN npm install
+
+    COPY code-repository/src/ /app/src/
+
+
+    RUN npm run generate
+
+    FROM smoothy/nginx:1.19-1.0.0
+
+    COPY static/server.conf /etc/nginx/conf.d/server.conf
+    COPY --from=build-stage /app/src/dist/ /usr/share/nginx/html
+    
+  static/server.conf: |-
+    server {
+        listen 8080;
+        listen [::]:8080 default ipv6only=on;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+        error_page 404 /404.html;
+        charset utf-8;
+
+        add_header X-Frame-Options "sameorigin";
+        add_header X-XSS-Protection "1; mode=block";
+        add_header X-Content-Type-Options "nosniff";
+
+        location = /favicon.ico {
+            log_not_found off;
+        }
+
+        location = /robots.txt  {
+            log_not_found off;
+        }
+
+        location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+          expires 1M;
+          add_header Cache-Control public;
+          add_header Pragma public;
+          add_header Vary Accept-Encoding;
+        }
+
+        location / {
+            try_files $uri $uri/index.html /index.html =404;
+        }
+
+        location ~ /\. {
+            log_not_found off;
+            deny all;
+        }
+    }
+
+template:
+
+  deployment:
+
+    - type: image
+      id: app-service-website-image-nuxtjs-static
+      name: nuxtjs_static
+      dockerfile: static/Dockerfile
+      arguments:
+        - name: NUXT_ENV_API_HOST
+          value: abc123
+        - name: NUXT_ENV_STRIPE_KEY
+          value: xyz789
+
+    - type: stateless_set
+      name: nuxtjs_static
+      id: website-stateless-set-nuxtjs-static
+      containers:
+        - name: nuxtjs
+          image: app-service-website-image-nuxtjs-static
+          memory:
+            min: 32
+            max: 256
+          cpus:
+            min: 50
+            max: 500
+
+    - type: entrypoint
+      id: website-entrypoint-nuxtjs-static
+      name: nuxtjs_static
+      alias: Nuxt.js service
+      target:
+        id: website-stateless-set-nuxtjs-static
+        type: stateless_set
+      port: 8080
+
+  interface:
+
+    - type: logs
+      name: NGINX error logs
+      source:
+        id: website-stateless-set-nuxtjs-static
+        type: stateless_set
