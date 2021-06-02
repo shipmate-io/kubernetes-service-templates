@@ -286,7 +286,10 @@ deployment:
     containers:
       - name: laravel
         image: "{* image.laravel *}"
-        command: php {{ path('/var/www', variable.path_to_source_code, '/artisan') }} schedule:run
+        command:
+          - php
+          - "{{ path('/var/www', variable.path_to_source_code, '/artisan') }}"
+          - schedule:run
         volume_mounts:
           - volume: "{* volume.storage *}"
             mount_path: "{{ path('/var/www/', variable.path_to_source_code, '/storage') }}"
@@ -322,20 +325,12 @@ deployment:
           min: 250
           max: 250
 
-  - type: config_file
-    name: init
-    source: php/init.sh
-    if: "{{ variable.release_script }}"
-
   - type: job
     name: init
     containers:
       - name: laravel
         image: "{* image.laravel *}"
-        command: bash /init.sh
-        config_file_mounts:
-          - config_file: "{* config_file.init *}"
-            mount_path: /init.sh
+        command: /scripts/init.sh
         volume_mounts:
           - volume: "{* volume.storage *}"
             mount_path: "{{ path('/var/www/', variable.path_to_source_code, '/storage') }}"

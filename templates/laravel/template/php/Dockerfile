@@ -52,6 +52,12 @@ RUN {{ command }}
 
 FROM php-stage AS production-stage
 
+{% if variable.release_script %}
+COPY --chown=smoothy:smoothy php/init.sh /scripts/init.sh
+{% endif %}
+
+RUN chmod -R 775 /scripts
+
 COPY --chown=smoothy:smoothy php/run.sh /entrypoints/run.sh
 COPY --chown=smoothy:smoothy {{ path('code-repository/', variable.path_to_source_code, '/') }} {{ path('/var/www', variable.path_to_source_code, '/') }}
 

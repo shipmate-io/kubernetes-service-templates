@@ -52,10 +52,6 @@ export class InstallTemplate
             // daemon_set
             await this.createEntrypoints(k8sCoreV1Api, template)
 
-            k8sCoreV1Api.listNamespacedPod('default').then((res) => {
-                console.log(res.body);
-            });
-
         } catch (error) {
             await this.deleteCluster(applicationSlug)
             throw error

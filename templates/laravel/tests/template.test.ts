@@ -97,7 +97,7 @@ apt-get install -y default-mysql-client
 
     try {
 
-        const host = `http://localhost:${laravelService.getEntrypoint('laravel')?.host_port}`
+        const host = `http://localhost:${laravelService.getEntrypoint('nginx')?.host_port}`
 
         await assertThatHomepageCanBeVisited(host)
         await assertThatImagesFromTheStorageFolderCanBeLoaded(host)
