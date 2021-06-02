@@ -1,17 +1,15 @@
-import { Template, utils } from 'tests'
+import { Template, Service, sleep } from 'tests'
 import axios from 'axios'
 import fs from 'fs'
 import FormData from 'form-data'
 import path from 'path'
 import Docker from 'dockerode'
 
-const laravel_template = new Template(path.resolve(__dirname, '../'))
-const mysql_template = new Template(path.resolve(__dirname, '../../mysql'))
-const redis_template = new Template(path.resolve(__dirname, '../../redis'))
+const laravelTemplate = new Template(path.resolve(__dirname, '../'))
 
 test('the template is valid', async () => {
 
-    await laravel_template.assertThatSyntaxIsValid()
+    await expect(laravelTemplate).toHaveValidSyntax()
 
 })
 
@@ -31,14 +29,9 @@ test('the template can be parsed', async () => {
             }
         ],
         'additional_software_script': `
-apt-get install -y default-mysql-client gnupg2 certbot python3-certbot-dns-cloudflare
+apt-get install -y default-mysql-client
 
 [ -d storage ] ?? echo "storage folder exists" || echo "storage folder does not exist"
-
-echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main" | tee -a /etc/apt/sources.list
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
-apt update
-apt install -y ansible        
 `,
         'timezone': 'Europe/Brussels',
         'opcache_enabled': true,
@@ -61,29 +54,16 @@ apt install -y ansible
         'APP_DEBUG': false,
     }
 
-    const actual_template = await laravel_template.parse('app', 'backend', variables, environment)
+    const parsing = laravelTemplate.parse('app', 'backend', variables, environment)
 
-    const expected_template = utils.readParsedTemplateFile(__dirname+'/concerns/parsed_template.yml')
-
-    utils.assertThatTemplatesAreEqual(actual_template, expected_template)
+    await expect(parsing).toSucceed()
+    await expect(parsing).toMatchParsedTemplate(__dirname+'/concerns/parsed_template.yml')
 
 }, 1000 * 15)
 
 test("the service works correctly when installed", async () => {
 
-    const code_repository_path = path.resolve(__dirname, 'concerns/application/')
-
-    await mysql_template.install(null, { 
-        'version': '8.0',
-        'root_password': 'secret',
-        'user': 'johndoe',
-        'password': 's3cr3t',
-        'databases': [
-            { 'name': 'laravel-app' },
-        ]
-    })
-
-    await redis_template.install(null, { 'version': '6', 'password': 'abc123' })
+    const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
 
     const variables = {
         'path_to_source_code': '',
@@ -91,12 +71,7 @@ test("the service works correctly when installed", async () => {
         'php_version': '7.4',
         'private_composer_registries': [],
         'additional_software_script': `
-apt-get install -y default-mysql-client gnupg2 certbot python3-certbot-dns-cloudflare
-
-echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main" | tee -a /etc/apt/sources.list
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
-apt update
-apt install -y ansible
+apt-get install -y default-mysql-client
 `,
         'timezone': 'Europe/Brussels',
         'opcache_enabled': true,
@@ -109,42 +84,31 @@ apt install -y ansible
         'package_manager': 'npm',
         'build_assets_script': 'npm run production',
         'deploy_script': 'php artisan config:cache\nphp artisan route:cache\nphp artisan view:cache\nrm -f public/storage\nphp artisan storage:link',
-        'release_script': 'sleep 60s\nphp artisan migrate --force',
+        'release_script': 'sleep 10s\nphp artisan migrate --force',
     }
 
     const environment = {
         'APP_KEY': 'base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=',
         'APP_ENV': 'production',
         'APP_DEBUG': false,
-        'DB_CONNECTION': 'mysql',
-        'DB_DATABASE': 'laravel-app',
-        'DB_HOST': mysql_template.getStatelessSet('laravel')?.containers[0].id,
-        'DB_PORT': 3306,
-        'DB_USERNAME': 'johndoe',
-        'DB_PASSWORD': 's3cr3t',
-        'REDIS_HOST': 'host.docker.internal',
-        'REDIS_PASSWORD': 'abc123',
-        'REDIS_PORT': redis_template.getEntrypoint('redis')?.host_port,
     }
 
-    await laravel_template.install(code_repository_path, variables, environment)
+    const laravelService = await laravelTemplate.install(codeRepositoryPath, variables, environment)
 
     try {
 
-        const host = `http://localhost:${laravel_template.getEntrypoint('laravel')?.host_port}`
+        const host = `http://localhost:${laravelService.getEntrypoint('laravel')?.host_port}`
 
         await assertThatHomepageCanBeVisited(host)
         await assertThatImagesFromTheStorageFolderCanBeLoaded(host)
         await assertThatPhpinfoShowsTheExpectedConfiguration(host)
-        await assertThatLogsAreWrittenToStdout(host)
-        await assertThatCronJobIsExecuted()
-        await assertThatQueuedJobsAreExecuted(host)
+        await assertThatLogsAreWrittenToStdout(laravelService, host)
+        await assertThatCronJobIsExecuted(laravelService)
+        await assertThatQueuedJobsAreExecuted(laravelService, host)
         await assertThatFilesCanBeUploaded(host)
 
     } finally {
-        await laravel_template.uninstall()
-        await mysql_template.uninstall()
-        await redis_template.uninstall()
+        // await laravelService.uninstall()
     }
 
 }, 1000 * 60 * 5)
@@ -174,52 +138,52 @@ async function assertThatPhpinfoShowsTheExpectedConfiguration(host: string): Pro
     expect(html).toContain('<td class="e">date.timezone</td><td class="v">Europe/Brussels</td>')
 }
 
-async function assertThatLogsAreWrittenToStdout(host: string): Promise<void>
+async function assertThatLogsAreWrittenToStdout(laravelService: Service, host: string): Promise<void>
 {
-    const laravel_container_id = laravel_template.getStatelessSet('laravel')?.containers[0].id
+    const laravelContainerId = laravelService.getStatelessSet('laravel')?.containers[0].id
 
-    if(! laravel_container_id) fail()
+    if(! laravelContainerId) fail()
 
-    const laravel_container = await new Docker().getContainer(laravel_container_id)
+    const laravelContainer = await new Docker().getContainer(laravelContainerId)
 
-    const logs_1 = await laravel_container.logs({ stdout: true, stderr: true, tail: 100, follow: false })
+    const logs1 = await laravelContainer.logs({ stdout: true, stderr: true, tail: 100, follow: false })
 
-    expect(logs_1.toString()).toContain("Current default time zone: 'Europe/Brussels'")
-    expect(logs_1.toString()).not.toContain("production.ERROR: Woops, something went wrong.")
+    expect(logs1.toString()).toContain("Current default time zone: 'Europe/Brussels'")
+    expect(logs1.toString()).not.toContain("production.ERROR: Woops, something went wrong.")
 
     await page.goto(`${host}/log`)
 
-    const logs_2 = await laravel_container.logs({ stdout: true, stderr: true, tail: 100, follow: false })
+    const logs2 = await laravelContainer.logs({ stdout: true, stderr: true, tail: 100, follow: false })
 
-    expect(logs_2.toString()).toContain("production.ERROR: Woops, something went wrong.")
+    expect(logs2.toString()).toContain("production.ERROR: Woops, something went wrong.")
 }
 
-async function assertThatCronJobIsExecuted(): Promise<void>
+async function assertThatCronJobIsExecuted(laravelService: Service): Promise<void>
 {
-    const scheduler_container_id = laravel_template.getStatelessSet('laravel')?.containers[0].id
+    const schedulerContainerId = laravelService.getStatelessSet('laravel')?.containers[0].id
 
-    if(! scheduler_container_id) fail()
+    if(! schedulerContainerId) fail()
 
-    const scheduler_container = await new Docker().getContainer(scheduler_container_id)
+    const schedulerContainer = await new Docker().getContainer(schedulerContainerId)
 
-    const logs_1 = await scheduler_container.logs({ stdout: true, stderr: true, tail: 100, follow: false })
+    const logs1 = await schedulerContainer.logs({ stdout: true, stderr: true, tail: 100, follow: false })
 
-    expect(logs_1.toString()).toContain('production.NOTICE: Cron job executed.')
+    expect(logs1.toString()).toContain('production.NOTICE: Cron job executed.')
 }
 
-async function assertThatQueuedJobsAreExecuted(host: string): Promise<void>
+async function assertThatQueuedJobsAreExecuted(laravelService: Service, host: string): Promise<void>
 {
-    const daemon_container_id = laravel_template.getStatelessSet('laravel')?.containers[0].id
+    const daemonContainerId = laravelService.getStatelessSet('laravel')?.containers[0].id
 
-    if(! daemon_container_id) fail()
+    if(! daemonContainerId) fail()
 
-    const daemon_container = await new Docker().getContainer(daemon_container_id)
+    const daemonContainer = await new Docker().getContainer(daemonContainerId)
 
     await page.goto(`${host}/job`)
 
-    await utils.sleep(5)
+    await sleep(5)
 
-    const logs = await daemon_container.logs({ stdout: true, stderr: true, tail: 100, follow: false })
+    const logs = await daemonContainer.logs({ stdout: true, stderr: true, tail: 100, follow: false })
 
     expect(logs.toString()).toContain('production.NOTICE: Queued job executed.')
 }
@@ -230,19 +194,19 @@ async function assertThatFilesCanBeUploaded(host: string): Promise<void>
 
     form.append('image', fs.createReadStream(path.resolve(__dirname, 'concerns/image.jpg')))
 
-    const upload_response = await axios.post(`${host}/image-upload`, form, {
+    const uploadResponse = await axios.post(`${host}/image-upload`, form, {
         headers: {
             ...form.getHeaders()
         }
     })
 
-    expect(upload_response.status).toBe(200)
+    expect(uploadResponse.status).toBe(200)
 
-    const image_url = upload_response.data
+    const imageUrl = uploadResponse.data
 
-    expect(image_url).toBeString()
+    expect(typeof imageUrl).toBe('string')
 
-    const image_response = await axios.get(image_url)
+    const imageResponse = await axios.get(imageUrl)
 
-    expect(image_response.status).toBe(200)
+    expect(imageResponse.status).toBe(200)
 }

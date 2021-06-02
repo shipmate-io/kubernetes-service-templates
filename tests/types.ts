@@ -118,6 +118,13 @@ export interface Container {
     environment?: EnvironmentVariable[];
     volume_mounts?: VolumeMount[];
     config_file_mounts?: ConfigFileMount[];
+    cpus: ComputeResource;
+    memory: ComputeResource;
+}
+
+export interface ComputeResource {
+    min: number;
+    max: number;
 }
 
 export interface EnvironmentVariable {
