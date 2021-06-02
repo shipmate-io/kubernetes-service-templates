@@ -40,6 +40,3 @@ COPY {{ path('code-repository/', variable.path_to_source_code, '/public') }} {{ 
 {% endif %}
 
 COPY --chown=smoothy:smoothy nginx/server.conf /etc/nginx/conf.d/server.conf
-
-RUN rm -f {{ path('/var/www/', variable.path_to_source_code, '/public/storage/') }} \
- && ([ -d {{ path('/var/www/', variable.path_to_source_code, '/storage/app/public/') }} ] && ln -s {{ path('/var/www/', variable.path_to_source_code, '/storage/app/public/') }} {{ path('/var/www/', variable.path_to_source_code, '/public/storage/') }} || true)

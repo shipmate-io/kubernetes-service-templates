@@ -143,6 +143,9 @@ export class InstallTemplate
                     name: volume.id
                 },
                 spec: {
+                    accessModes: [
+                        'ReadWriteOnce' // TODO: set dynamically
+                    ],
                     resources: {
                         requests: {
                             storage: '1Gi',
@@ -216,6 +219,9 @@ export class InstallTemplate
                         },
                         spec: {
                             containers: containers,
+                            securityContext: {
+                                fsGroup: 1000
+                            },
                             restartPolicy: 'Always',
                             volumes: volumes,
                         }
