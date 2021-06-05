@@ -102,9 +102,8 @@ apt-get install -y default-mysql-client
         await assertThatHomepageCanBeVisited(host)
         await assertThatImagesFromTheStorageFolderCanBeLoaded(host)
         await assertThatPhpinfoShowsTheExpectedConfiguration(host)
-        // await assertThatLogsAreWrittenToStdout(laravelService, host)
-        // await assertThatCronJobIsExecuted(laravelService)
-        // await assertThatQueuedJobsAreExecuted(laravelService, host)
+        await assertThatLogsAreWrittenToStdout(laravelService, host)
+        await assertThatCronJobIsExecuted(laravelService)
         await assertThatFilesCanBeUploaded(host)
 
     } finally {
@@ -140,52 +139,34 @@ async function assertThatPhpinfoShowsTheExpectedConfiguration(host: string): Pro
 
 async function assertThatLogsAreWrittenToStdout(laravelService: Service, host: string): Promise<void>
 {
-    const laravelContainerId = laravelService.getStatelessSet('laravel')?.containers[0].id
+    const logs1 = await laravelService.getLogsOfStatelessSet('laravel');
 
-    if(! laravelContainerId) fail()
-
-    const laravelContainer = await new Docker().getContainer(laravelContainerId)
-
-    const logs1 = await laravelContainer.logs({ stdout: true, stderr: true, tail: 100, follow: false })
-
-    expect(logs1.toString()).toContain("Current default time zone: 'Europe/Brussels'")
-    expect(logs1.toString()).not.toContain("production.ERROR: Woops, something went wrong.")
+    expect(logs1).toContain("Current default time zone: 'Europe/Brussels'")
+    expect(logs1).not.toContain("production.ERROR: Woops, something went wrong.")
 
     await page.goto(`${host}/log`)
 
-    const logs2 = await laravelContainer.logs({ stdout: true, stderr: true, tail: 100, follow: false })
+    const logs2 = await laravelService.getLogsOfStatelessSet('laravel');
 
-    expect(logs2.toString()).toContain("production.ERROR: Woops, something went wrong.")
+    expect(logs2).toContain("production.ERROR: Woops, something went wrong.")
 }
 
 async function assertThatCronJobIsExecuted(laravelService: Service): Promise<void>
 {
-    const schedulerContainerId = laravelService.getStatelessSet('laravel')?.containers[0].id
+    const logs = await laravelService.getLogsOfCronJob('scheduler');
 
-    if(! schedulerContainerId) fail()
-
-    const schedulerContainer = await new Docker().getContainer(schedulerContainerId)
-
-    const logs1 = await schedulerContainer.logs({ stdout: true, stderr: true, tail: 100, follow: false })
-
-    expect(logs1.toString()).toContain('production.NOTICE: Cron job executed.')
+    expect(logs).toContain('production.NOTICE: Cron job executed.')
 }
 
 async function assertThatQueuedJobsAreExecuted(laravelService: Service, host: string): Promise<void>
 {
-    const daemonContainerId = laravelService.getStatelessSet('laravel')?.containers[0].id
-
-    if(! daemonContainerId) fail()
-
-    const daemonContainer = await new Docker().getContainer(daemonContainerId)
-
     await page.goto(`${host}/job`)
 
     await sleep(5)
 
-    const logs = await daemonContainer.logs({ stdout: true, stderr: true, tail: 100, follow: false })
+    const logs = await laravelService.getLogsOfStatelessSet('daemon_0');
 
-    expect(logs.toString()).toContain('production.NOTICE: Queued job executed.')
+    expect(logs).toContain('production.NOTICE: Queued job executed.')
 }
 
 async function assertThatFilesCanBeUploaded(host: string): Promise<void>
