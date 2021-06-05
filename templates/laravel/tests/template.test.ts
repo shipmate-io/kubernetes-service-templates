@@ -104,6 +104,7 @@ apt-get install -y default-mysql-client
         await assertThatPhpinfoShowsTheExpectedConfiguration(host)
         await assertThatLogsAreWrittenToStdout(laravelService, host)
         await assertThatCronJobIsExecuted(laravelService)
+        await assertThatQueuedJobsAreExecuted(laravelService, host)
         await assertThatFilesCanBeUploaded(host)
 
     } finally {
