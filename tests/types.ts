@@ -175,3 +175,11 @@ export interface LogInterface {
 export interface VolumeInterface {
     //
 }
+
+/*
+ * Cloud services
+ */
+
+export interface CloudService {
+    install(): Promise<void>;
+}

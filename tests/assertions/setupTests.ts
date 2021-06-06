@@ -1,10 +1,10 @@
 import _ from 'lodash'
 import fs from 'fs'
 import YAML from 'yaml'
-import ValidateTemplate from '../actions/ValidateTemplate'
+import ValidateTemplate from '@/actions/ValidateTemplate'
 import ApiError from '@/api/ApiError';
 import { ParsedTemplate } from '@/types'
-import { Template } from 'tests'
+import Template from '@/Template'
 
 function assertThatObjectsAreEqual(path: string, actual: any, expected: any): string|null
 {

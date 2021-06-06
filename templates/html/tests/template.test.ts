@@ -1,6 +1,6 @@
-import { Template } from 'tests'
 import path from 'path'
-import Service from '@/Service'
+import Template from '@/Template'
+import Service from '@/TemplateService'
 
 const htmlTemplate = new Template(path.resolve(__dirname, '../'))
 

@@ -1,9 +1,12 @@
-import { Template, Service, sleep } from 'tests'
-import axios from 'axios'
 import fs from 'fs'
-import FormData from 'form-data'
 import path from 'path'
-import Docker from 'dockerode'
+import axios from 'axios'
+import FormData from 'form-data'
+import sleep from '@/sleep'
+import Cluster from '@/Cluster'
+import Template from '@/Template'
+import TemplateService from '@/TemplateService'
+import MysqlService from '@/MysqlService'
 
 const laravelTemplate = new Template(path.resolve(__dirname, '../'))
 
@@ -44,7 +47,7 @@ apt-get install -y default-mysql-client
         'build_assets': true,
         'package_manager': 'npm',
         'build_assets_script': 'npm run production',
-        'deploy_script': 'php artisan config:cache\nphp artisan route:cache\nphp artisan view:cache\nrm -f public/storage\nphp artisan storage:link',
+        'deploy_script': 'php artisan config:cache\nphp artisan route:cache\nphp artisan view:cache',
         'release_script': 'php artisan db:ready\nphp artisan migrate --force',
     }
 
@@ -63,39 +66,53 @@ apt-get install -y default-mysql-client
 
 test("the service works correctly when installed", async () => {
 
-    const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
-
-    const variables = {
-        'path_to_source_code': '',
-        'paths_to_shared_libraries': [],
-        'php_version': '7.4',
-        'private_composer_registries': [],
-        'opcache_enabled': true,
-        'maximum_file_upload_size': 25,
-        'additional_software_script': `
-apt-get install -y default-mysql-client
-`,
-        'timezone': 'Europe/Brussels',
-        'run_scheduler': true,
-        'daemons': [
-            'php artisan queue:work'
-        ],
-        'build_assets': true,
-        'package_manager': 'npm',
-        'build_assets_script': 'npm run production',
-        'deploy_script': 'php artisan config:cache\nphp artisan route:cache\nphp artisan view:cache',
-        'release_script': 'sleep 10s\nphp artisan migrate --force',
-    }
-
-    const environment = {
-        'APP_KEY': 'base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=',
-        'APP_ENV': 'production',
-        'APP_DEBUG': false,
-    }
-
-    const laravelService = await laravelTemplate.install(codeRepositoryPath, variables, environment)
+    const cluster = await (new Cluster).start();
 
     try {
+
+        const mysqlService = new MysqlService;
+
+        await cluster.installCloudService(mysqlService)
+
+        const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
+
+        const variables = {
+            'path_to_source_code': '',
+            'paths_to_shared_libraries': [],
+            'php_version': '7.4',
+            'private_composer_registries': [],
+            'opcache_enabled': true,
+            'maximum_file_upload_size': 25,
+            'additional_software_script': `
+    apt-get install -y default-mysql-client
+    `,
+            'timezone': 'Europe/Brussels',
+            'run_scheduler': true,
+            'daemons': [
+                'php artisan queue:work'
+            ],
+            'build_assets': true,
+            'package_manager': 'npm',
+            'build_assets_script': 'npm run production',
+            'deploy_script': 'php artisan config:cache\nphp artisan route:cache\nphp artisan view:cache',
+            'release_script': 'sleep 10s\nphp artisan migrate --force',
+        }
+
+        const environment = {
+            'APP_KEY': 'base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=',
+            'APP_ENV': 'production',
+            'APP_DEBUG': false,
+            'DB_CONNECTION': 'mysql',
+            'DB_HOST': mysqlService.getHost(),
+            'DB_PORT': mysqlService.getPort(),
+            'DB_USERNAME': mysqlService.getUsername(),
+            'DB_PASSWORD': mysqlService.getPassword(),
+            'DB_DATABASE': mysqlService.getDatabase(),
+        }
+
+        const laravelService = await cluster.installTemplate(
+            laravelTemplate, codeRepositoryPath, variables, environment
+        )
 
         const host = `http://localhost:${laravelService.getEntrypoint('nginx')?.host_port}`
 
@@ -108,7 +125,7 @@ apt-get install -y default-mysql-client
         await assertThatFilesCanBeUploaded(host)
 
     } finally {
-        // await laravelService.uninstall()
+        await cluster.stop()
     }
 
 }, 1000 * 60 * 5)
@@ -138,7 +155,7 @@ async function assertThatPhpinfoShowsTheExpectedConfiguration(host: string): Pro
     expect(html).toContain('<td class="e">date.timezone</td><td class="v">Europe/Brussels</td>')
 }
 
-async function assertThatLogsAreWrittenToStdout(laravelService: Service, host: string): Promise<void>
+async function assertThatLogsAreWrittenToStdout(laravelService: TemplateService, host: string): Promise<void>
 {
     const logs1 = await laravelService.getLogsOfStatelessSet('laravel');
 
@@ -152,14 +169,14 @@ async function assertThatLogsAreWrittenToStdout(laravelService: Service, host: s
     expect(logs2).toContain("production.ERROR: Woops, something went wrong.")
 }
 
-async function assertThatCronJobIsExecuted(laravelService: Service): Promise<void>
+async function assertThatCronJobIsExecuted(laravelService: TemplateService): Promise<void>
 {
     const logs = await laravelService.getLogsOfCronJob('scheduler');
 
     expect(logs).toContain('production.NOTICE: Cron job executed.')
 }
 
-async function assertThatQueuedJobsAreExecuted(laravelService: Service, host: string): Promise<void>
+async function assertThatQueuedJobsAreExecuted(laravelService: TemplateService, host: string): Promise<void>
 {
     await page.goto(`${host}/job`)
 
@@ -183,14 +200,4 @@ async function assertThatFilesCanBeUploaded(host: string): Promise<void>
     })
 
     expect(uploadResponse.status).toBe(200)
-
-    /*
-    const imageUrl = uploadResponse.data
-
-    expect(typeof imageUrl).toBe('string')
-
-    const imageResponse = await axios.get(imageUrl)
-
-    expect(imageResponse.status).toBe(200)
-    */
 }

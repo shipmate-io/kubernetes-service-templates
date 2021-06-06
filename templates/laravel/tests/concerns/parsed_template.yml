@@ -1,36 +1,36 @@
 files:
   
   nginx/Dockerfile: |-
-    #####################################
-    # BUILD ASSETS
-    #####################################
-
+    # Build the JavaScript and CSS assets, if specified.
     FROM node:alpine as assets-stage
 
+    # Create the directory to copy to Laravel source code to.
     RUN mkdir -p /app/services/laravel/
+
+    # CD into the directory.
     WORKDIR /app/services/laravel/
 
+    # Copy the locked JavaScript dependency manifest into the directory and install the dependencies using the specified package manager.
     COPY code-repository/services/laravel/package*.json /app/services/laravel/
     RUN npm install
 
+    # Copy the source code of the service into the directory.
     COPY code-repository/services/laravel/ /app/services/laravel/
 
+    # Copy the source code of the shared libraries into the directory.
     COPY code-repository/libraries/ui-components/  /app/libraries/ui-components/
 
+    # Run the specified build assets script.
     RUN npm run production
 
-    #####################################
-    # CREATE NGINX CONTAINER
-    #####################################
-
+    # Switch to the nginx image.
     FROM smoothy/nginx:1.19-1.0.0
 
-    COPY --from=assets-stage /app/services/laravel/public /var/www/services/laravel/public
-
+    # Copy the nginx configuration into the image.
     COPY --chown=smoothy:smoothy nginx/server.conf /etc/nginx/conf.d/server.conf
 
-    RUN rm -f /var/www/services/laravel/public/storage/ \
-     && ([ -d /var/www/services/laravel/storage/app/public/ ] && ln -s /var/www/services/laravel/storage/app/public/ /var/www/services/laravel/public/storage/ || true)
+    # Copy the source code of the service into the image.
+    COPY --from=assets-stage /app/services/laravel/public /var/www/services/laravel/public
 
   nginx/server.conf: |-
     server {
@@ -96,85 +96,87 @@ files:
     }
   
   php/Dockerfile: |-
-    #####################################
-    # SET UP PHP ENVIRONMENT
-    #####################################
-
+    # Set the php-fpm base image, based on the specified php version.
     FROM smoothy/php-fpm:7.4-1.0.0 AS php-stage
 
-    ENV APPLICATION_ROOT /var/www/services/laravel/public
-
+    # Install the additional Linux packages or utilites, if specified.
     RUN apt-get update \
      && (apt-get install -y default-mysql-client) \
      && ([ -d storage ] ?? echo "storage folder exists" || echo "storage folder does not exist") \
      && apt-get clean \
      && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-    #####################################
-    # BUILD ASSETS
-    #####################################
-
+    # Build the JavaScript and CSS assets, if specified.
     FROM node:alpine AS assets-stage
 
+    # Create the directory to copy to Laravel source code to.
     RUN mkdir -p /app/services/laravel/
+
+    # CD into the directory.
     WORKDIR /app/services/laravel/
 
+    # Copy the locked JavaScript dependency manifest into the directory and install the dependencies using the specified package manager.
     COPY code-repository/services/laravel/package*.json /app/services/laravel/
     RUN npm install
 
+    # Copy the source code of the service into the directory.
     COPY code-repository/services/laravel/ /app/services/laravel/
 
+    # Copy the source code of the shared libraries into the directory.
     COPY code-repository/libraries/ui-components/  /app/libraries/ui-components/
 
+    # Run the specified build assets script.
     RUN npm run production
 
-    #####################################
-    # ADD PHP CODE
-    #####################################
-
+    # Switch to the php image.
     FROM php-stage AS production-stage
 
+    # Copy the init.sh script into the image.
+    COPY --chown=smoothy:smoothy php/init.sh /scripts/init.sh
+
+    # Make the scripts executable to users of the smoothy group.
+    RUN chmod -R 775 /scripts
+
+    # Copy the run.sh entrypoint into the image.
     COPY --chown=smoothy:smoothy php/run.sh /entrypoints/run.sh
+
+    # Copy the source code of the service into the image.
     COPY --chown=smoothy:smoothy code-repository/services/laravel/ /var/www/services/laravel/
 
+    # Copy the source code of the shared libraries into the image.
     COPY --chown=smoothy:smoothy code-repository/libraries/ui-components/ /var/www/libraries/ui-components/
 
+    # Make the "storage" and "bootstrap/cache" directories writable to users of the smoothy group.
     RUN chmod -R 775 /var/www/services/laravel/storage \
      && chmod -R 775 /var/www/services/laravel/bootstrap/cache
 
+    # Copy the built JavaScript and CSS assets into the image, if any.
     COPY --chown=smoothy:smoothy --from=assets-stage /app/services/laravel/public /var/www/services/laravel/public
 
+    # CD into the directory containing the source code of the service.
     WORKDIR /var/www/services/laravel/
 
+    # Authenticate against the specified private composer registries, if any.
     ARG PRIVATE_COMPOSER_REGISTRY_URL_0
     ARG PRIVATE_COMPOSER_REGISTRY_USERNAME_0
     ARG PRIVATE_COMPOSER_REGISTRY_PASSWORD_0
     RUN composer config $PRIVATE_COMPOSER_REGISTRY_URL_0 $PRIVATE_COMPOSER_REGISTRY_USERNAME_0 $PRIVATE_COMPOSER_REGISTRY_PASSWORD_0
 
+    # Install the composer dependencies of the service.
     RUN composer install --ignore-platform-reqs --no-dev --no-interaction --prefer-dist
 
   php/init.sh: |
-    #!/bin/bash
-
-    #####################################
-    # init Laravel application
-    #####################################
+    #!/bin/sh
 
     php artisan db:ready
     php artisan migrate --force
 
   php/run.sh: |
-    #!/bin/bash
-
-    #####################################
-    # prepare Laravel application
-    #####################################
+    #!/bin/sh
 
     php artisan config:cache
     php artisan route:cache
     php artisan view:cache
-    rm -f public/storage
-    php artisan storage:link
   
 template:
   deployment:
@@ -195,11 +197,6 @@ template:
       id: app-service-backend-image-nginx
       name: nginx
       dockerfile: nginx/Dockerfile
-    
-    - type: volume
-      id: backend-volume-storage
-      name: storage
-      size: 2
 
     - type: stateless_set
       id: backend-stateless-set-laravel
@@ -207,9 +204,6 @@ template:
       containers:
         - name: laravel
           image: app-service-backend-image-laravel
-          volume_mounts:
-            - volume: backend-volume-storage
-              mount_path: /var/www/services/laravel/storage
           environment:
             - name: APP_KEY
               value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
@@ -236,11 +230,7 @@ template:
       containers:
         - name: laravel
           image: app-service-backend-image-laravel
-          command:
-            - php artisan horizon
-          volume_mounts:
-            - volume: backend-volume-storage
-              mount_path: /var/www/services/laravel/storage
+          command: [php, artisan, horizon]
           environment:
             - name: APP_KEY
               value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
@@ -263,11 +253,7 @@ template:
       containers:
         - name: laravel
           image: app-service-backend-image-laravel
-          command: 
-            - php /var/www/services/laravel/artisan schedule:run
-          volume_mounts:
-            - volume: backend-volume-storage
-              mount_path: /var/www/services/laravel/storage
+          command: [php, /var/www/services/laravel/artisan, schedule:run]
           environment:
             - name: APP_KEY
               value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
@@ -289,9 +275,6 @@ template:
       containers:
         - name: nginx
           image: app-service-backend-image-nginx
-          volume_mounts:
-            - volume: backend-volume-storage
-              mount_path: /var/www/services/laravel/storage
           environment:
             - name: MAX_FILE_UPLOAD
               value: 25
@@ -302,32 +285,12 @@ template:
             min: 250
             max: 250
 
-    - type: config_file
-      id: backend-config-file-init
-      name: init
-      contents: |
-        #!/bin/bash
-
-        #####################################
-        # init Laravel application
-        #####################################
-
-        php artisan db:ready
-        php artisan migrate --force
-
     - type: job
       name: init
       containers:
         - name: laravel
           image: app-service-backend-image-laravel
-          command: 
-            - bash /init.sh
-          config_file_mounts:
-            - config_file: backend-config-file-init
-              mount_path: /init.sh
-          volume_mounts:
-            - volume: backend-volume-storage
-              mount_path: /var/www/services/laravel/storage
+          command: [/scripts/init.sh]
           environment:
             - name: APP_KEY
               value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
@@ -365,16 +328,12 @@ template:
   interface:
 
     - type: shared_variable
-      name: LARAVEL_HOST
+      name: host
       value: backend-entrypoint-nginx
 
     - type: shared_variable
-      name: LARAVEL_PORT
+      name: port
       value: 8080
-
-    - type: files
-      name: Storage
-      volume: backend-volume-storage
 
     - type: logs
       name: NGINX

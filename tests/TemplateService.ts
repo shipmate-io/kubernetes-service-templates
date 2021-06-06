@@ -1,4 +1,3 @@
-import UninstallTemplate from './actions/UninstallTemplate'
 import { Entrypoint, ParsedTemplate, StatelessSet } from '@/types'
 import * as k8s from '@kubernetes/client-node';
 
@@ -77,12 +76,5 @@ export default class Service
         return await k8sCoreV1Api
             .readNamespacedPodLog(pods[0].metadata?.name, 'default')
             .then(response => response.body || '');
-    }
-
-    // uninstall
-
-    public async uninstall(): Promise<void>
-    {
-        return await (new UninstallTemplate).execute(this.parsedTemplate)
     }
 }

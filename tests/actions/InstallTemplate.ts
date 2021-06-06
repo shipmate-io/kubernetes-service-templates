@@ -1,68 +1,42 @@
+import _ from 'lodash'
 // @ts-ignore
 import exec from 'await-exec'
-import _ from 'lodash'
-import tmp, { DirResult as Directory } from 'tmp'
-import ParseTemplate from '@/actions/ParseTemplate'
-import BuildImage from '@/docker/BuildImage'
-import * as k8s from '@kubernetes/client-node';
-import { Volume, Container, Image, Entrypoint, ConfigFile, ParsedTemplate, Variables, StatelessSet, CronJob, Job } from '@/types'
-import { v4 as uuidv4 } from 'uuid'
 import { Base64 } from 'js-base64';
-
-tmp.setGracefulCleanup()
+import * as k8s from '@kubernetes/client-node';
+import sleep from '@/sleep'
+import BuildImage from '@/actions/BuildImage'
+import { Volume, Container, Image, Entrypoint, ConfigFile, ParsedTemplate, StatelessSet, CronJob, Job } from '@/types'
 
 export class InstallTemplate
 {
-    directory: Directory
-
-    constructor()
-    {
-        this.directory = tmp.dirSync()
-    }
-
     public async execute(
-        codeRepositoryPath: string|null, templatePath: string, templateVersion: string, variables: Variables, 
-        environment: Variables, initializationTimeInSeconds: number
-    ): Promise<ParsedTemplate>
+        clusterId: string, hostPorts: number[], template: ParsedTemplate, codeRepositoryPath: string|null, 
+        initializationTimeInSeconds: number
+    ): Promise<void>
     {
-        const applicationSlug = 'app-'+uuidv4().substring(0, 8)
-        const serviceName = 'svc-'+uuidv4().substring(0, 8)
-        const template = await (new ParseTemplate).execute(
-            applicationSlug, serviceName, templatePath, templateVersion, variables, environment
-        )
+        await this.buildImages(clusterId, codeRepositoryPath, template)
 
-        try {
-            await this.buildImages(codeRepositoryPath, template)
-            const entrypoints = this.parseEntrypoints(template)
-            await this.createCluster(applicationSlug, entrypoints)
-            await this.importImages(applicationSlug, template)
+        const kc = new k8s.KubeConfig();
+        kc.loadFromDefault();
 
-            const kc = new k8s.KubeConfig();
-            kc.loadFromDefault();
+        const k8sCoreV1Api = kc.makeApiClient(k8s.CoreV1Api);
+        const k8sAppsV1Api = kc.makeApiClient(k8s.AppsV1Api);
+        const k8sBatchV1Api = kc.makeApiClient(k8s.BatchV1Api);
+        
+        await this.createVolumes(k8sCoreV1Api, template)
+        await this.createConfigFiles(k8sCoreV1Api, template)
+        await this.createStatelessSets(k8sCoreV1Api, k8sAppsV1Api, template)
+        await this.createCronJobs(k8sCoreV1Api, k8sBatchV1Api, template)
+        await this.createJobs(k8sCoreV1Api, k8sBatchV1Api, template)
+        // daemon_set
+        await this.createEntrypoints(k8sCoreV1Api, hostPorts, template)
 
-            const k8sCoreV1Api = kc.makeApiClient(k8s.CoreV1Api);
-            const k8sAppsV1Api = kc.makeApiClient(k8s.AppsV1Api);
-            const k8sBatchV1Api = kc.makeApiClient(k8s.BatchV1Api);
-            
-            await this.createVolumes(k8sCoreV1Api, template)
-            await this.createConfigFiles(k8sCoreV1Api, template)
-            await this.createStatelessSets(k8sCoreV1Api, k8sAppsV1Api, template)
-            await this.createCronJobs(k8sCoreV1Api, k8sBatchV1Api, template)
-            await this.createJobs(k8sCoreV1Api, k8sBatchV1Api, template)
-            // daemon_set
-            await this.createEntrypoints(k8sCoreV1Api, template)
-
-        } catch (error) {
-            await this.deleteCluster(applicationSlug)
-            throw error
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 1000 * initializationTimeInSeconds))
-
-        return template
+        await sleep(initializationTimeInSeconds)
     }
 
-    private async buildImages(codeRepositoryPath: string|null, template: ParsedTemplate): Promise<void>
+    private async buildImages(
+        clusterId: string, codeRepositoryPath: string|null, template: ParsedTemplate
+    ): Promise<void>
     {
         const images: Image[] = []
 
@@ -79,52 +53,7 @@ export class InstallTemplate
 
         for(const image of images) {
             await new BuildImage().execute(codeRepositoryPath, template, image)
-        }
-    }
-
-    private parseEntrypoints(template: ParsedTemplate): Entrypoint[]
-    {
-        const entrypoints: Entrypoint[] = []
-
-        template.template.deployment.forEach(resource => {
-
-            if (resource.type !== 'entrypoint') return
-
-            const minPort = 30000
-            const maxPort = 32767
-            const randomPort = Math.floor(Math.random() * (maxPort - minPort)) + minPort
-
-            resource.host_port = randomPort
-
-            entrypoints.push(resource)
-
-        })
-
-        return entrypoints;
-    }
-
-    private async createCluster(applicationSlug: string, entrypoints: Entrypoint[]): Promise<void>
-    {
-        const hostPorts = entrypoints
-            .map((entrypoint: Entrypoint) => `-p "${entrypoint.host_port}:${entrypoint.host_port}@agent[0]"`)
-            .join(' ')
-
-        await exec(`k3d cluster create smoothy-${applicationSlug} ${hostPorts} --agents 1`)
-    }
-
-    private async importImages(applicationSlug: string, template: ParsedTemplate): Promise<void>
-    {
-        const images: Image[] = []
-
-        for(const resource of template.template.deployment) {
-            if(resource.type !== 'image') continue
-            images.push(resource)
-        }
-
-        if(images.length === 0) return
-
-        for(const image of images) {
-            await exec(`k3d image import ${image.id}:latest -c smoothy-${applicationSlug}`)
+            await exec(`k3d image import ${image.id}:latest -c ${clusterId}`)
         }
     }
 
@@ -397,12 +326,13 @@ export class InstallTemplate
         return [...volumeMounts, ...configFileMounts];
     }
 
-    private async createEntrypoints(k8sApi: k8s.CoreV1Api, template: ParsedTemplate): Promise<void>
+    private async createEntrypoints(k8sApi: k8s.CoreV1Api, hostPorts: number[], template: ParsedTemplate): Promise<void>
     {
         const entrypoints: Entrypoint[] = []
 
         for(const resource of template.template.deployment) {
             if(resource.type !== 'entrypoint') continue
+            resource.host_port = hostPorts.pop()
             entrypoints.push(resource)
         }
 
@@ -426,11 +356,6 @@ export class InstallTemplate
                 }
             })
         }
-    }
-
-    private async deleteCluster(applicationSlug: string): Promise<void>
-    {
-        await exec(`k3d cluster delete smoothy-${applicationSlug}`)
     }
 }
 
