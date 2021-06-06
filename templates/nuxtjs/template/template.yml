@@ -1,0 +1,109 @@
+api: v1
+
+meta:
+  name: Nuxt.js
+  description: Deploy a Nuxt.js service on a Kubernetes cluster.
+
+form:
+
+  - name: Source code
+    questions:
+
+      - name: Path to source code
+        description: >
+          The absolute path to the directory in the Git repository that contains the source code of the service.
+          For example: "/services/web-client".
+        variable: path_to_source_code
+        type: file_path
+        default: '/'
+
+      - name: Paths to shared libraries
+        description: >
+          If the service uses one or more shared libraries that are stored in the Git repository outside of its source 
+          directory, you should specify the absolute paths to these libraries here. 
+          For example: "/libraries/ui-components".
+        variable: paths_to_shared_libraries
+        required: false
+        type: file_paths
+
+  - name: Building configuration
+    questions:
+
+      - name: Package manager
+        description: The package manager used to install the Node.js dependencies of the service.
+        variable: package_manager
+        required: true
+        type: select
+        options:
+          - name: NPM
+            value: npm
+          - name: Yarn
+            value: yarn
+        default: npm
+
+      - name: Build target
+        description: The type of build to create for the service.
+        variable: build_target
+        required: true
+        type: select
+        options:
+          - name: Client-side static service
+            value: static
+          # TODO - name: Server-side Node.js service
+          # TODO   value: server
+        default: static
+
+      - name: Build script
+        description: The script to build the service.
+        variable: build_script
+        required: true
+        type: code
+        default:
+          switch:
+            - case: "{{ variable.build_target == 'static' }}"
+              value: "{{ variable.package_manager }} run generate"
+            # TODO - case: "{{ variable.build_target == 'server' }}"
+            # TODO   value: "{{ variable.package_manager }} run build"
+
+      - name: Path to build
+        description: The directory in which the build of the service is stored by the build script.
+        variable: path_to_build
+        required: true
+        type: file_path
+        default: dist/
+
+deployment:
+
+  - type: image
+    name: nuxtjs_static
+    dockerfile: static/Dockerfile
+    arguments:
+      - map: "{{ environment }}"
+    if: "{{ variable.build_target == 'static' }}"
+
+  - type: stateless_set
+    name: nuxtjs_static
+    containers:
+      - name: nuxtjs
+        image: "{* image.nuxtjs_static *}"
+        memory:
+          min: 32
+          max: 256
+        cpus:
+          min: 50
+          max: 500
+    if: "{{ variable.build_target == 'static' }}"
+
+  - type: entrypoint
+    name: nuxtjs_static
+    alias: Nuxt.js service
+    target: "{* stateless_set.nuxtjs_static *}"
+    port: 8080
+    if: "{{ variable.build_target == 'static' }}"
+
+interface:
+
+  - type: logs
+    name: NGINX error logs
+    source: "{* stateless_set.nuxtjs_static *}"
+    if: "{{ variable.build_target == 'static' }}"
