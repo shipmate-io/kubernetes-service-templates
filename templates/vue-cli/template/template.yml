@@ -1,0 +1,90 @@
+api: v1
+
+meta:
+  name: Vue CLI
+  description: Deploy your Vue.js service built with Vue CLI on a Kubernetes cluster.
+
+form:
+
+  - name: Source code
+    questions:
+
+      - name: Path to Vue.js source code
+        description: The directory in the Git repository that contains the source code of the service.
+        variable: path_to_source_code
+        type: file_path
+        default: ''
+
+      - name: Paths to shared libraries
+        description: >
+          If the service uses one or more shared libraries that are stored in the Git repository outside of its source 
+          directory, you should specify the absolute paths to these libraries here. 
+          For example: "/libraries/ui-components".
+        variable: paths_to_shared_libraries
+        type: file_paths
+
+  - name: Building configuration
+    questions:
+
+      - name: Package manager
+        description: The package manager used to install the Node.js dependencies of the service.
+        variable: package_manager
+        required: true
+        type: select
+        options:
+          - name: NPM
+            value: npm
+          - name: Yarn
+            value: yarn
+        default: npm
+
+      - name: Build script
+        description: The script to build the service.
+        variable: build_script
+        required: true
+        type: code
+        default:
+          switch:
+            - case: "{{ variable.package_manager == 'npm' }}"
+              value: npm run build
+            - case: "{{ variable.package_manager == 'yarn' }}"
+              value: yarn run build
+
+      - name: Path to build
+        description: The directory in which the build of the service is stored by the build script.
+        variable: path_to_build
+        required: true
+        type: file_path
+        default: dist/
+
+deployment:
+
+  - type: image
+    name: vue
+    dockerfile: Dockerfile
+    arguments:
+      - map: "{{ environment }}"
+
+  - type: stateless_set
+    name: vue
+    containers:
+      - name: vue
+        image: "{* image.vue *}"
+        memory:
+          min: 32
+          max: 256
+        cpus:
+          min: 50
+          max: 500
+
+  - type: entrypoint
+    name: vue
+    alias: Vue.js service
+    target: "{* stateless_set.vue *}"
+    port: 8080
+
+interface:
+
+  - type: logs
+    name: NGINX error logs
+    source: "{* stateless_set.vue *}"
