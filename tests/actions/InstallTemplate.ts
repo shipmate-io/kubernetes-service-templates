@@ -1,55 +1,42 @@
-import tmp, { DirResult as Directory } from 'tmp'
-import fs from 'fs'
-import ParseTemplate from '@/actions/ParseTemplate'
-import UninstallTemplate from '@/actions/UninstallTemplate'
-import BuildImage from '@/docker/BuildImage'
-import CreateNetwork from '@/docker/CreateNetwork'
-import CreateVolume from '@/docker/CreateVolume'
-import RunJob from '@/docker/RunJob'
-import RunContainer from '@/docker/RunContainer'
-import { Volume, Image, Entrypoint, ConfigFile, ParsedTemplate, Variables } from '@/types'
-import { v4 as uuidv4 } from 'uuid'
-
-tmp.setGracefulCleanup()
+import _ from 'lodash'
+// @ts-ignore
+import exec from 'await-exec'
+import { Base64 } from 'js-base64';
+import * as k8s from '@kubernetes/client-node';
+import sleep from '@/sleep'
+import BuildImage from '@/actions/BuildImage'
+import { Volume, Container, Image, Entrypoint, ConfigFile, ParsedTemplate, StatelessSet, CronJob, Job } from '@/types'
 
 export class InstallTemplate
 {
-    directory: Directory
-
-    constructor()
+    public async execute(
+        clusterId: string, hostPorts: number[], template: ParsedTemplate, codeRepositoryPath: string|null, 
+        initializationTimeInSeconds: number
+    ): Promise<void>
     {
-        this.directory = tmp.dirSync()
+        await this.buildImages(clusterId, codeRepositoryPath, template)
+
+        const kc = new k8s.KubeConfig();
+        kc.loadFromDefault();
+
+        const k8sCoreV1Api = kc.makeApiClient(k8s.CoreV1Api);
+        const k8sAppsV1Api = kc.makeApiClient(k8s.AppsV1Api);
+        const k8sBatchV1Api = kc.makeApiClient(k8s.BatchV1Api);
+        
+        await this.createVolumes(k8sCoreV1Api, template)
+        await this.createConfigFiles(k8sCoreV1Api, template)
+        await this.createStatelessSets(k8sCoreV1Api, k8sAppsV1Api, template)
+        await this.createCronJobs(k8sCoreV1Api, k8sBatchV1Api, template)
+        await this.createJobs(k8sCoreV1Api, k8sBatchV1Api, template)
+        // daemon_set
+        await this.createEntrypoints(k8sCoreV1Api, hostPorts, template)
+
+        await sleep(initializationTimeInSeconds)
     }
 
-    async execute(
-        codeRepositoryPath: string|null, templatePath: string, templateVersion: string, variables: Variables, 
-        environment: Variables, initializationTimeInSeconds: number
-    ): Promise<ParsedTemplate>
-    {
-        const applicationSlug = uuidv4().substring(0, 8)
-        const serviceName = uuidv4().substring(0, 8)
-        const template = await (new ParseTemplate).execute(
-            applicationSlug, serviceName, templatePath, templateVersion, variables, environment
-        )
-
-        try {
-            await new CreateNetwork().execute('smoothy')
-            await this.buildImages(codeRepositoryPath, template)
-            await this.createVolumes(template)
-            await this.createConfigFiles(template)
-            await this.runContainers(template)
-            await this.runJobs(template)
-        } catch (error) {
-            (new UninstallTemplate).execute(template)
-            throw error
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 1000 * initializationTimeInSeconds))
-
-        return template
-    }
-
-    async buildImages(codeRepositoryPath: string|null, template: ParsedTemplate): Promise<void>
+    private async buildImages(
+        clusterId: string, codeRepositoryPath: string|null, template: ParsedTemplate
+    ): Promise<void>
     {
         const images: Image[] = []
 
@@ -66,10 +53,11 @@ export class InstallTemplate
 
         for(const image of images) {
             await new BuildImage().execute(codeRepositoryPath, template, image)
+            await exec(`k3d image import ${image.id}:latest -c ${clusterId}`)
         }
     }
 
-    async createVolumes(template: ParsedTemplate): Promise<void>
+    private async createVolumes(k8sCoreV1Api: k8s.CoreV1Api, template: ParsedTemplate): Promise<void>
     {
         const volumes: Volume[] = []
 
@@ -78,14 +66,26 @@ export class InstallTemplate
             volumes.push(resource)
         }
 
-        if(volumes.length === 0) return
-
         for(const volume of volumes) {
-            await new CreateVolume().execute(volume)
+            await k8sCoreV1Api.createNamespacedPersistentVolumeClaim('default', {
+                metadata: {
+                    name: volume.id
+                },
+                spec: {
+                    accessModes: [
+                        'ReadWriteOnce' // TODO: set dynamically
+                    ],
+                    resources: {
+                        requests: {
+                            storage: '1Gi',
+                        }
+                    }
+                }
+            })
         }
     }
 
-    async createConfigFiles(template: ParsedTemplate): Promise<void>
+    private async createConfigFiles(k8sCoreV1Api: k8s.CoreV1Api, template: ParsedTemplate): Promise<void>
     {
         const configFiles: ConfigFile[] = []
 
@@ -94,48 +94,267 @@ export class InstallTemplate
             configFiles.push(resource)
         }
 
-        if(configFiles.length === 0) return
-
         for(const configFile of configFiles) {
-            fs.writeFileSync(`${this.directory.name}/${configFile.id}`, configFile.contents)
+            await k8sCoreV1Api.createNamespacedConfigMap('default', {
+                metadata: {
+                    name: configFile.id
+                },
+                data: {
+                    contents: configFile.contents,
+                }
+            })
         }
     }
 
-    async runContainers(template: ParsedTemplate): Promise<void>
+    private async createStatelessSets(
+        k8sCoreV1Api: k8s.CoreV1Api, k8sAppsV1Api: k8s.AppsV1Api, template: ParsedTemplate
+    ): Promise<void>
+    {
+        const statelessSets: StatelessSet[] = []
+
+        for(const resource of template.template.deployment) {
+            if(resource.type !== 'stateless_set') continue
+            statelessSets.push(resource)
+        }
+
+        for(const statelessSet of statelessSets) {
+            const containers: k8s.V1Container[] = []
+            let volumes: k8s.V1Volume[] = []
+
+            for(const container of statelessSet.containers) {
+                containers.push(await this.parseContainers(k8sCoreV1Api, container))
+                volumes = volumes.concat(await this.parseVolumes(container))
+            }
+
+            await k8sAppsV1Api.createNamespacedDeployment('default', {
+                metadata: {
+                    name: statelessSet.id
+                },
+                spec: {
+                    selector: {
+                        matchLabels: {
+                            'smoothy/managed-by': statelessSet.id,
+                        }
+                    },
+                    replicas: 1,
+                    strategy: {
+                        type: 'RollingUpdate'
+                    },
+                    template: {
+                        metadata: {
+                            labels: {
+                                'smoothy/managed-by': statelessSet.id,
+                            }
+                        },
+                        spec: {
+                            containers: containers,
+                            securityContext: {
+                                fsGroup: 1000
+                            },
+                            restartPolicy: 'Always',
+                            volumes: volumes,
+                        }
+                    }
+                }
+            })
+        }
+    }
+
+    private async createCronJobs(
+        k8sCoreV1Api: k8s.CoreV1Api, k8sBatchV1Api: k8s.BatchV1Api, template: ParsedTemplate
+    ): Promise<void>
+    {
+        const cronJobs: CronJob[] = []
+
+        for(const resource of template.template.deployment) {
+            if(resource.type !== 'cron_job') continue
+            cronJobs.push(resource)
+        }
+
+        for(const cronJob of cronJobs) {
+            const containers: k8s.V1Container[] = []
+            let volumes: k8s.V1Volume[] = []
+
+            for(const container of cronJob.containers) {
+                containers.push(await this.parseContainers(k8sCoreV1Api, container))
+                volumes = volumes.concat(await this.parseVolumes(container))
+            }
+
+            await k8sBatchV1Api.createNamespacedJob('default', {
+                metadata: {
+                    name: cronJob.id
+                },
+                spec: {
+                    template: {
+                        metadata: {
+                            labels: {
+                                'smoothy/managed-by': `${cronJob.id}`,
+                            }
+                        },
+                        spec: {
+                            containers: containers,
+                            restartPolicy: 'Never',
+                            volumes: volumes,
+                        }
+                    }
+                }
+            })
+        }
+    }
+
+    private async createJobs(
+        k8sCoreV1Api: k8s.CoreV1Api, k8sBatchV1Api: k8s.BatchV1Api, template: ParsedTemplate
+    ): Promise<void>
+    {
+        const jobs: Job[] = []
+
+        for(const resource of template.template.deployment) {
+            if(resource.type !== 'job') continue
+            jobs.push(resource)
+        }
+
+        for(const job of jobs) {
+            const containers: k8s.V1Container[] = []
+            let volumes: k8s.V1Volume[] = []
+
+            for(const container of job.containers) {
+                containers.push(await this.parseContainers(k8sCoreV1Api, container))
+                volumes = volumes.concat(await this.parseVolumes(container))
+            }
+
+            await k8sBatchV1Api.createNamespacedJob('default', {
+                metadata: {
+                    name: job.id
+                },
+                spec: {
+                    template: {
+                        metadata: {
+                            labels: {
+                                'smoothy/managed-by': job.id,
+                            }
+                        },
+                        spec: {
+                            containers: containers,
+                            restartPolicy: 'Never',
+                            volumes: volumes,
+                        }
+                    }
+                }
+            })
+        }
+    }
+
+    private async parseContainers(k8sCoreV1Api: k8s.CoreV1Api, container: Container): Promise<k8s.V1Container>
+    {
+        const volumeMounts = (container.volume_mounts ?? []).map((volumeMount): k8s.V1VolumeMount => {
+            return {
+                name: volumeMount.volume,
+                mountPath: volumeMount.mount_path
+            }
+        });
+
+        const configFileMounts = (container.config_file_mounts ?? []).map((configFileMount): k8s.V1VolumeMount => {
+            return {
+                name: configFileMount.config_file,
+                mountPath: configFileMount.mount_path,
+            }
+        });
+
+        const environmentVariables = (container.environment ?? []).map((environmentVariable): k8s.V1EnvVar => {                
+            return {
+                name: environmentVariable.name,
+                valueFrom: {
+                    secretKeyRef: {
+                        name: `${container.id}-environment`,
+                        key: environmentVariable.name,
+                    }
+                },
+            }
+        });
+
+        await k8sCoreV1Api.createNamespacedSecret('default', {
+            metadata: {
+                name: `${container.id}-environment`,
+            },
+            data: (container.environment ?? []).reduce((map: Record<string, string>, environmentVariable) => {
+                map[environmentVariable.name] = Base64.encode(`${environmentVariable.value}`)
+                return map;
+            }, {})
+        });
+
+        return {
+            name: container.name,
+            image: container.image,
+            imagePullPolicy: 'IfNotPresent',
+            command: container.command ?? [],
+            volumeMounts: [...volumeMounts, ...configFileMounts],
+            tty: true,
+            env: environmentVariables,
+            resources: {
+                requests: {
+                    cpu: `${container.cpus.min}m`,
+                    memory: `${container.memory.min}Mi`,
+                },
+                limits: {
+                    cpu: `${container.cpus.max}m`,
+                    memory: `${container.memory.max}Mi`,
+                }
+            }
+        }
+    }
+
+    private parseVolumes(container: Container): k8s.V1Volume[]
+    {
+        const volumeMounts = (container.volume_mounts ?? []).map((volumeMount): k8s.V1Volume => {
+            return {
+                name: volumeMount.volume,
+                persistentVolumeClaim: {
+                    claimName: volumeMount.volume
+                }
+            }
+        });
+
+        const configFileMounts = (container.config_file_mounts ?? []).map((configFileMount): k8s.V1Volume  => {
+            return {
+                name: configFileMount.config_file,
+                configMap: {
+                    name: configFileMount.config_file
+                }
+            }
+        });
+
+        return [...volumeMounts, ...configFileMounts];
+    }
+
+    private async createEntrypoints(k8sApi: k8s.CoreV1Api, hostPorts: number[], template: ParsedTemplate): Promise<void>
     {
         const entrypoints: Entrypoint[] = []
 
-        template.template.deployment.forEach(resource => {
-
-            if(resource.type !== 'entrypoint') return
-
-            const minPort = 50000
-            const maxPort = 65353
-            const randomPort = Math.floor(Math.random() * (maxPort - minPort) ) + minPort
-
-            resource.host_port = randomPort
-
+        for(const resource of template.template.deployment) {
+            if(resource.type !== 'entrypoint') continue
+            resource.host_port = hostPorts.pop()
             entrypoints.push(resource)
-
-        })
-
-        for(const resource of template.template.deployment) {
-
-            if(resource.type !== 'stateless_set' && resource.type !== 'daemon_set') continue
-
-            await new RunContainer().execute(this.directory, resource, entrypoints)
-
         }
-    }
 
-    async runJobs(template: ParsedTemplate): Promise<void>
-    {
-        for(const resource of template.template.deployment) {
-
-            if(resource.type !== 'job' && resource.type !== 'cron_job') continue
-
-            await new RunJob().execute(this.directory, resource)
-
+        for(const entrypoint of entrypoints) {
+            await k8sApi.createNamespacedService('default', {
+                metadata: {
+                    name: entrypoint.id
+                },
+                spec: {
+                    type: 'NodePort',
+                    selector: {
+                        'smoothy/managed-by': entrypoint.target.id,
+                    },
+                    ports: [
+                        {
+                            protocol: entrypoint.protocol,
+                            port: entrypoint.port,
+                            nodePort: entrypoint.host_port
+                        }
+                    ]
+                }
+            })
         }
     }
 }

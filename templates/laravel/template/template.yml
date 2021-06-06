@@ -1,0 +1,324 @@
+api: v1
+
+meta:
+  name: Laravel
+  description: The PHP Framework for Web Artisans
+
+form:
+
+  - name: Source code
+    questions:
+
+      - type: file_path
+        name: Path to Laravel source code
+        description: >
+          The absolute path to the directory in the Git repository that contains the source code of the service.
+          For example: "/services/billing".
+        variable: path_to_source_code
+        required: false
+        default: ''
+
+      - type: file_paths
+        name: Paths to shared libraries
+        description: >
+          If the service uses one or more shared libraries that are stored in the Git repository outside of its source 
+          directory, you should specify the absolute paths to these libraries here. 
+          For example: "/libraries/validation-helpers".
+        variable: paths_to_shared_libraries
+        required: false
+
+  - name: PHP settings
+    questions:
+
+      - type: select
+        name: PHP version
+        description: The PHP version in which the source code of the service is written.
+        required: true
+        variable: php_version
+        options:
+          - name: "7.4"
+            value: "7.4"
+          - name: "8.0"
+            value: "8.0"
+
+      - type: structs
+        name: Private composer registries
+        description: >
+          The private Composer registries that host the private Composer dependencies of the service, if any.
+        variable: private_composer_registries
+        questions:
+          - type: string
+            name: URL
+            description: The URL of the private registry.
+            variable: url
+            required: true
+          - type: string
+            name: Username
+            description: The username that should be used to authenticate with the private registry.
+            variable: username
+            required: true
+          - type: password
+            name: Password
+            description: The password that should be used to authenticate with the private registry.
+            variable: password
+            required: true
+        
+      - type: integer
+        name: Maximum file upload size
+        description: The maximum allowed size in megabytes (MB) of files uploaded to the service.
+        variable: maximum_file_upload_size
+        default: 2
+
+      - type: boolean
+        name: OPcache
+        description: Enable PHP's OPcode caching system to improve the loading time of the service.
+        variable: opcache_enabled
+
+  - name: Operating system
+    questions:
+
+      - type: timezone
+        name: Timezone
+        variable: timezone
+        required: true
+
+      - type: code
+        name: Additional software
+        description: >
+          The installation script for the additional Linux packages or utilities the service needs, if any. Within the 
+          script, you can use any default Linux Debian utility, including the apt package manager. Multi-line commands
+          and comments are not allowed in the script.
+        variable: additional_software_script
+
+  - name: Background processing
+    questions:
+
+      - type: boolean
+        name: Laravel scheduler
+        description: Enable the Laravel scheduler to run periodic tasks.
+        variable: run_scheduler
+
+      - type: list
+        name: Daemons
+        description: The daemon processes that should run throughout the entire lifetime of the service.
+        variable: daemons
+        options:
+          - name: "php artisan horizon"
+            value: "php artisan horizon"
+          - name: "php artisan queue:work"
+            value: "php artisan queue:work"
+
+  - name: Frontend assets
+    questions:
+
+      - type: boolean
+        name: Build assets
+        description: Build the JavaScript and CSS assets of the service during the deployment process.
+        variable: build_assets
+
+      - type: select
+        name: Package manager
+        description: The package manager used to install the JavaScript dependencies of the service.
+        variable: package_manager
+        required: true
+        options:
+          - name: NPM
+            value: npm
+          - name: Yarn
+            value: yarn
+        default: npm
+        if: "{{ variable.build_assets }}"
+
+      - type: code
+        name: Build assets script
+        description: >
+          The script to build the JavaScript and CSS assets of the service and store the result in Laravel's /public 
+          directory.
+        variable: build_assets_script
+        required: true
+        default:
+          switch:
+            - case: "{{ variable.package_manager == 'npm' }}"
+              value: npm run production
+            - case: "{{ variable.package_manager == 'yarn' }}"
+              value: yarn run production
+        if: "{{ variable.build_assets }}"
+
+  - name: Deployment
+    questions:
+
+      - type: code
+        name: Deploy script
+        description: >
+          The script to run every time a new instance of the service is deployed. The script should only perform tasks 
+          of which the impact is limited to the scope of a single service.
+        variable: deploy_script
+        default: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - type: code
+        name: Release script
+        description: >
+          The script to run once every time a new version of the service is released. The script should only perform 
+          tasks that impact all instances of the service.
+        variable: release_script
+        default: |
+          sleep 60s
+          php artisan migrate --force
+
+deployment:
+
+  - type: image
+    name: laravel
+    dockerfile: php/Dockerfile
+    arguments:
+      - name: PRIVATE_COMPOSER_REGISTRY_URL_{{ loop.key }}
+        value: "{{ loop.value.url }}"
+        loop: "{{ variable.private_composer_registries }}"
+      - name: PRIVATE_COMPOSER_REGISTRY_USERNAME_{{ loop.key }}
+        value: "{{ loop.value.username }}"
+        loop: "{{ variable.private_composer_registries }}"
+      - name: PRIVATE_COMPOSER_REGISTRY_PASSWORD_{{ loop.key }}
+        value: "{{ loop.value.password }}"
+        loop: "{{ variable.private_composer_registries }}"
+
+  - type: image
+    name: nginx
+    dockerfile: nginx/Dockerfile
+
+  - type: stateless_set
+    name: laravel
+    containers:
+      - name: laravel
+        image: "{* image.laravel *}"
+        environment:
+          - map: "{{ environment }}"
+          - name: TIMEZONE
+            value: "{{ variable.timezone }}"
+          - name: MAX_FILE_UPLOAD
+            value: "{{ variable.maximum_file_upload_size }}"
+          - name: OPCACHE
+            value: "{{ variable.opcache_enabled }}"
+        memory:
+          min: 64
+          max: 512
+        cpus:
+          min: 250
+          max: 1000
+
+  - type: stateless_set
+    name: "daemon_{{ loop.key }}"
+    containers:
+      - name: laravel
+        image: "{* image.laravel *}"
+        command: "{{ loop.value }}"
+        environment:
+          - map: "{{ environment }}"
+          - name: TIMEZONE
+            value: "{{ variable.timezone }}"
+        memory:
+          min: 64
+          max: 512
+        cpus:
+          min: 250
+          max: 1000
+    loop: "{{ variable.daemons }}"
+
+  - type: cron_job
+    name: scheduler
+    schedule: "* * * * *"
+    containers:
+      - name: laravel
+        image: "{* image.laravel *}"
+        command: ["php", "{{ path('/var/www', variable.path_to_source_code, '/artisan') }}", "schedule:run"]
+        environment:
+          - map: "{{ environment }}"
+          - name: TIMEZONE
+            value: "{{ variable.timezone }}"
+        memory:
+          min: 64
+          max: 512
+        cpus:
+          min: 100
+          max: 1000
+    if: "{{ variable.run_scheduler }}"
+
+  - type: job
+    name: init
+    containers:
+      - name: laravel
+        image: "{* image.laravel *}"
+        command: /scripts/init.sh
+        environment:
+          - map: "{{ environment }}"
+          - name: TIMEZONE
+            value: "{{ variable.timezone }}"
+        memory:
+          min: 64
+          max: 512
+        cpus:
+          min: 100
+          max: 1000
+    if: "{{ variable.release_script }}"
+
+  - type: stateless_set
+    name: nginx
+    containers:
+      - name: nginx
+        image: "{* image.nginx *}"
+        environment:
+          - name: MAX_FILE_UPLOAD
+            value: "{{ variable.maximum_file_upload_size }}"
+        memory:
+          min: 32
+          max: 256
+        cpus:
+          min: 50
+          max: 500
+
+  - type: entrypoint
+    name: php
+    alias: PHP
+    target: "{* stateless_set.laravel *}"
+    port: 9000
+  
+  - type: entrypoint
+    name: nginx
+    alias: NGINX
+    target: "{* stateless_set.nginx *}"
+    port: 8080
+
+interface:
+
+  - type: shared_variable
+    name: host
+    value: "{{ entrypoint.nginx.host }}"
+
+  - type: shared_variable
+    name: port
+    value: "{{ entrypoint.nginx.port }}"
+
+  - type: logs
+    name: NGINX
+    source: "{* stateless_set.nginx *}"
+
+  - type: logs
+    name: Init script
+    source: "{* job.init *}"
+    if: "{{ variable.release_script }}"
+
+  - type: logs
+    name: Laravel
+    source: "{* stateless_set.laravel *}"
+
+  - type: logs
+    name: Scheduler
+    source: "{* cron_job.scheduler *}"
+    if: "{{ variable.run_scheduler }}"
+
+  - type: logs
+    name: "Daemon: {{ loop.value }}"
+    source: "{* stateless_set.daemon_{{ loop.key }} *}"
+    loop: "{{ variable.daemons }}"
