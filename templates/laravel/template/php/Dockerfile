@@ -1,6 +1,6 @@
 # Set the php-fpm base image, based on the specified php version.
 {% if variable.php_version == "7.4" %}
-FROM smoothy/php-fpm:7.4-1.0.0 AS php-stage
+FROM smoothy/php-fpm:7.4-1.0.1 AS php-stage
 {% elseif variable.php_version == "8.0" %}
 FROM smoothy/php-fpm:8.0-1.0.0 AS php-stage
 {% endif %}

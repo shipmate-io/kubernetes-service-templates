@@ -24,7 +24,7 @@ files:
     RUN npm run production
 
     # Switch to the nginx image.
-    FROM smoothy/nginx:1.19-1.0.0
+    FROM smoothy/nginx:1.19-1.0.1
 
     # Copy the nginx configuration into the image.
     COPY --chown=smoothy:smoothy nginx/server.conf /etc/nginx/conf.d/server.conf
@@ -97,7 +97,7 @@ files:
   
   php/Dockerfile: |-
     # Set the php-fpm base image, based on the specified php version.
-    FROM smoothy/php-fpm:7.4-1.0.0 AS php-stage
+    FROM smoothy/php-fpm:7.4-1.0.1 AS php-stage
 
     # Install the additional Linux packages or utilites, if specified.
     RUN apt-get update \
