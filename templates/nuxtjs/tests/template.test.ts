@@ -1,4 +1,5 @@
-import { Template } from 'tests'
+import Cluster from '@/Cluster';
+import Template from '@/Template';
 import path from 'path'
 
 const nuxtTemplate = new Template(path.resolve(__dirname, '../'))
@@ -70,24 +71,26 @@ describe('the template can be parsed', () => {
 describe('the service works correctly when installed', () => {
 
     test('with npm as package manager', async () => {
-        
-        const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
 
-        const variables = {
-            'path_to_source_code': 'static/',
-            'package_manager': 'npm',
-            'build_target': 'static',
-            'build_script': 'npm run generate',
-            'path_to_build': 'dist/',
-        }
-
-        const environment = {
-            'NUXT_ENV_APP_KEY': 'abc123',
-        }
-
-        const nuxtService = await nuxtTemplate.install(codeRepositoryPath, variables, environment)
+        const cluster = await (new Cluster).start()
 
         try {
+        
+            const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
+
+            const variables = {
+                'path_to_source_code': 'static/',
+                'package_manager': 'npm',
+                'build_target': 'static',
+                'build_script': 'npm run generate',
+                'path_to_build': 'dist/',
+            }
+
+            const environment = {
+                'NUXT_ENV_APP_KEY': 'abc123',
+            }
+
+            const nuxtService = await cluster.installTemplate(nuxtTemplate, codeRepositoryPath, variables, environment)
             
             const host = `http://localhost:${nuxtService.getEntrypoint('nuxtjs_static')?.host_port}`;
 
@@ -109,26 +112,28 @@ describe('the service works correctly when installed', () => {
             expect(await page.content()).toContain('This page could not be found.');
 
         } finally {
-            await nuxtService.uninstall()
+            await cluster.stop()
         }
 
     }, 1000 * 60 * 4)
 
     test('with yarn as package manager', async () => {
-        
-        const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/static/')
 
-        const variables = {
-            'path_to_source_code': '/',
-            'package_manager': 'yarn',
-            'build_target': 'static',
-            'build_script': 'yarn run generate',
-            'path_to_build': 'dist/',
-        }
-
-        const nuxtService = await nuxtTemplate.install(codeRepositoryPath, variables)
+        const cluster = await (new Cluster).start()
 
         try {
+        
+            const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/static/')
+
+            const variables = {
+                'path_to_source_code': '/',
+                'package_manager': 'yarn',
+                'build_target': 'static',
+                'build_script': 'yarn run generate',
+                'path_to_build': 'dist/',
+            }
+
+            const nuxtService = await cluster.installTemplate(nuxtTemplate, codeRepositoryPath, variables)
             
             const host = `http://localhost:${nuxtService.getEntrypoint('nuxtjs_static')?.host_port}`;
 
@@ -150,7 +155,7 @@ describe('the service works correctly when installed', () => {
             expect(await page.content()).toContain('This page could not be found.');
 
         } finally {
-            await nuxtService.uninstall()
+            await cluster.stop()
         }
 
     }, 1000 * 60 * 4)
