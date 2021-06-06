@@ -39,7 +39,7 @@
     "yaml": "^1.10.0"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest --runInBand"
   },
   "babel": {
     "presets": [

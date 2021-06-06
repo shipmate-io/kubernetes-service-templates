@@ -54,12 +54,12 @@ export default class Cluster
             this.id, this.ports, parsedTemplate, codeRepositoryPath, initializationTimeInSeconds
         )
 
-        return new TemplateService(parsedTemplate)
+        return new TemplateService(this.id, parsedTemplate)
     }
 
     public async installCloudService(cloudService: CloudService): Promise<void>
     {
-        return cloudService.install()
+        return cloudService.install(this.id)
     }
 
     public async stop(): Promise<void>

@@ -3,10 +3,12 @@ import * as k8s from '@kubernetes/client-node';
 
 export default class Service
 {
+    private clusterId: string
     private parsedTemplate: ParsedTemplate
 
-    constructor(parsedTemplate: ParsedTemplate)
+    constructor(clusterId: string, parsedTemplate: ParsedTemplate)
     {
+        this.clusterId = clusterId
         this.parsedTemplate = parsedTemplate
     }
 
@@ -62,6 +64,7 @@ export default class Service
 
         const kc = new k8s.KubeConfig();
         kc.loadFromDefault();
+        kc.setCurrentContext(`k3d-${this.clusterId}`);
 
         const k8sCoreV1Api = kc.makeApiClient(k8s.CoreV1Api);
 

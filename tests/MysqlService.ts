@@ -28,10 +28,11 @@ export default class MysqlService
         return 'application'
     }
 
-    public async install(): Promise<void>
+    public async install(clusterId: string): Promise<void>
     {
         const kc = new k8s.KubeConfig();
         kc.loadFromDefault();
+        kc.setCurrentContext(`k3d-${clusterId}`);
 
         const k8sCoreV1Api = kc.makeApiClient(k8s.CoreV1Api);
         const k8sAppsV1Api = kc.makeApiClient(k8s.AppsV1Api);

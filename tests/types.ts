@@ -181,5 +181,5 @@ export interface VolumeInterface {
  */
 
 export interface CloudService {
-    install(): Promise<void>;
+    install(clusterId: string): Promise<void>;
 }
