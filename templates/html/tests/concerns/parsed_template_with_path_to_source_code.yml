@@ -3,7 +3,10 @@ files:
   Dockerfile: |-
     FROM smoothy/nginx:1.19-1.0.0
 
+    # Copy the nginx configuration into the image.
     COPY server.conf /etc/nginx/conf.d/server.conf
+
+    # Copy the source code of the service into the image.
     COPY code-repository/src/ /usr/share/nginx/html/src/
 
   server.conf: |-
@@ -80,9 +83,9 @@ template:
           volume_mounts: []
           memory:
             min: 32
-            max: 128
+            max: 256
           cpus:
-            min: 250
+            min: 50
             max: 500
           liveness_probe: null
           readiness_probe: null
@@ -101,7 +104,7 @@ template:
   interface:
 
     - type: logs
-      name: NGINX
+      name: NGINX error logs
       source:
         type: stateless_set
         id: website-stateless-set-html

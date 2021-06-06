@@ -43,7 +43,7 @@ export default class Cluster
 
     public async installTemplate(
         template: Template, codeRepositoryPath: string|null, variables: Variables = {}, environment: Variables = {}, 
-        initializationTimeInSeconds: number = 10
+        initializationTimeInSeconds: number = 30
     ): Promise<TemplateService>
     {
         const applicationSlug = 'app-'+uuidv4().substring(0, 8)

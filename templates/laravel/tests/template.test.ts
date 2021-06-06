@@ -111,7 +111,7 @@ test("the service works correctly when installed", async () => {
         }
 
         const laravelService = await cluster.installTemplate(
-            laravelTemplate, codeRepositoryPath, variables, environment, 30
+            laravelTemplate, codeRepositoryPath, variables, environment
         )
 
         const host = `http://localhost:${laravelService.getEntrypoint('nginx')?.host_port}`

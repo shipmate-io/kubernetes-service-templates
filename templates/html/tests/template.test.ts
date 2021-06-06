@@ -1,6 +1,7 @@
 import path from 'path'
 import Template from '@/Template'
-import Service from '@/TemplateService'
+import TemplateService from '@/TemplateService'
+import Cluster from '@/Cluster'
 
 const htmlTemplate = new Template(path.resolve(__dirname, '../'))
 
@@ -34,37 +35,45 @@ test('the template can be parsed with path_to_source_code', async () => {
 
 test("the service works correctly when installed without path_to_source_code", async () => {
 
-    const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/src/')
-
-    const service = await htmlTemplate.install(codeRepositoryPath)
+    const cluster = await (new Cluster).start()
 
     try {
+
+        const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/src/')
+
+        const service = await cluster.installTemplate(htmlTemplate, codeRepositoryPath)
+
         await assertThatServiceWorksAsExpected(service)
+        
     } finally {
-        await service.uninstall()
+        await cluster.stop()
     }
 
 }, 1000 * 60 * 3)
 
 test("the service works correctly when installed with path_to_source_code", async () => {
 
-    const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
-
-    const variables = {
-        'path_to_source_code': 'src/',
-    }
-
-    const service = await htmlTemplate.install(codeRepositoryPath, variables)
+    const cluster = await (new Cluster).start()
 
     try {
+
+        const codeRepositoryPath = path.resolve(__dirname, 'concerns/application/')
+
+        const variables = {
+            'path_to_source_code': 'src/',
+        }
+
+        const service = await cluster.installTemplate(htmlTemplate, codeRepositoryPath, variables)
+    
         await assertThatServiceWorksAsExpected(service)
+
     } finally {
-        await service.uninstall()
+        await cluster.stop()
     }
 
 }, 1000 * 60 * 3)
 
-async function assertThatServiceWorksAsExpected(service: Service) 
+async function assertThatServiceWorksAsExpected(service: TemplateService) 
 {
     const host = `http://localhost:${service.getEntrypoint('html')?.host_port}`
 
