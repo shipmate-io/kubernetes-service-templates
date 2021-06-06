@@ -84,11 +84,11 @@ template:
         - name: vue
           image: app-service-website-image-vue
           memory:
-            min: 256
+            min: 32
             max: 256
           cpus:
-            min: 250
-            max: 250
+            min: 50
+            max: 500
 
     - type: entrypoint
       id: website-entrypoint-vue
