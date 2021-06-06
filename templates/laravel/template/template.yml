@@ -202,11 +202,11 @@ deployment:
           - name: OPCACHE
             value: "{{ variable.opcache_enabled }}"
         memory:
-          min: 256
-          max: 256
+          min: 64
+          max: 512
         cpus:
           min: 250
-          max: 250
+          max: 1000
 
   - type: stateless_set
     name: "daemon_{{ loop.key }}"
@@ -219,11 +219,11 @@ deployment:
           - name: TIMEZONE
             value: "{{ variable.timezone }}"
         memory:
-          min: 256
-          max: 256
+          min: 64
+          max: 512
         cpus:
           min: 250
-          max: 250
+          max: 1000
     loop: "{{ variable.daemons }}"
 
   - type: cron_job
@@ -238,27 +238,12 @@ deployment:
           - name: TIMEZONE
             value: "{{ variable.timezone }}"
         memory:
-          min: 256
-          max: 256
+          min: 64
+          max: 512
         cpus:
-          min: 250
-          max: 250
+          min: 100
+          max: 1000
     if: "{{ variable.run_scheduler }}"
-
-  - type: stateless_set
-    name: nginx
-    containers:
-      - name: nginx
-        image: "{* image.nginx *}"
-        environment:
-          - name: MAX_FILE_UPLOAD
-            value: "{{ variable.maximum_file_upload_size }}"
-        memory:
-          min: 256
-          max: 256
-        cpus:
-          min: 250
-          max: 250
 
   - type: job
     name: init
@@ -271,12 +256,27 @@ deployment:
           - name: TIMEZONE
             value: "{{ variable.timezone }}"
         memory:
-          min: 256
+          min: 64
+          max: 512
+        cpus:
+          min: 100
+          max: 1000
+    if: "{{ variable.release_script }}"
+
+  - type: stateless_set
+    name: nginx
+    containers:
+      - name: nginx
+        image: "{* image.nginx *}"
+        environment:
+          - name: MAX_FILE_UPLOAD
+            value: "{{ variable.maximum_file_upload_size }}"
+        memory:
+          min: 32
           max: 256
         cpus:
-          min: 250
-          max: 250
-    if: "{{ variable.release_script }}"
+          min: 50
+          max: 500
 
   - type: entrypoint
     name: php

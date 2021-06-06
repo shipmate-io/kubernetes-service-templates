@@ -218,11 +218,11 @@ template:
             - name: OPCACHE
               value: true
           memory:
-            min: 256
-            max: 256
+            min: 64
+            max: 512
           cpus:
             min: 250
-            max: 250
+            max: 1000
 
     - type: stateless_set
       id: backend-stateless-set-daemon-0
@@ -241,11 +241,11 @@ template:
             - name: TIMEZONE
               value: Europe/Brussels
           memory:
-            min: 256
-            max: 256
+            min: 64
+            max: 512
           cpus:
             min: 250
-            max: 250
+            max: 1000
 
     - type: cron_job
       name: scheduler
@@ -264,26 +264,11 @@ template:
             - name: TIMEZONE
               value: Europe/Brussels
           memory:
-            min: 256
-            max: 256
+            min: 64
+            max: 512
           cpus:
-            min: 250
-            max: 250
-
-    - type: stateless_set
-      name: nginx
-      containers:
-        - name: nginx
-          image: app-service-backend-image-nginx
-          environment:
-            - name: MAX_FILE_UPLOAD
-              value: 25
-          memory:
-            min: 256
-            max: 256
-          cpus:
-            min: 250
-            max: 250
+            min: 100
+            max: 1000
 
     - type: job
       name: init
@@ -301,11 +286,26 @@ template:
             - name: TIMEZONE
               value: Europe/Brussels
           memory:
-            min: 256
+            min: 64
+            max: 512
+          cpus:
+            min: 100
+            max: 1000
+
+    - type: stateless_set
+      name: nginx
+      containers:
+        - name: nginx
+          image: app-service-backend-image-nginx
+          environment:
+            - name: MAX_FILE_UPLOAD
+              value: 25
+          memory:
+            min: 32
             max: 256
           cpus:
-            min: 250
-            max: 250
+            min: 50
+            max: 500
 
     - type: entrypoint
       id: backend-entrypoint-php
