@@ -57,6 +57,17 @@ form:
         type: file_path
         default: dist/
 
+  - name: Operating system
+    questions:
+
+      - type: code
+        name: Additional software
+        description: >
+          The installation script for the additional Linux packages or utilities the service needs, if any. Within the 
+          script, you can use any default Linux Debian utility, including the apt package manager. Multi-line commands
+          and comments are not allowed in the script.
+        variable: additional_software_script
+
 deployment:
 
   - type: image

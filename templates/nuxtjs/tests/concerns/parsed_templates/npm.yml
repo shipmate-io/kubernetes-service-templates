@@ -1,25 +1,39 @@
 files:
 
   static/Dockerfile: |-
-    FROM node:alpine as build-stage
+    FROM node:16 as build-stage
 
+    # Set the environment variables, if any.
     ARG NUXT_ENV_API_HOST
     ARG NUXT_ENV_STRIPE_KEY
 
+    # Install the additional Linux packages or utilites, if specified.
+
+    # Create the directory to copy the source code to.
     RUN mkdir -p /app/src/
+
+    # CD into the directory.
     WORKDIR /app/src/
 
+    # Copy the locked dependency manifest into the directory and install the dependencies using the specified package manager.
     COPY code-repository/src/package*.json /app/src/
     RUN npm install
 
+    # Copy the source code of the service into the directory.
     COPY code-repository/src/ /app/src/
 
+    # Copy the source code of the shared libraries into the directory.
 
+    # Run the specified build assets script.
     RUN npm run generate
 
+    # Switch to the NGINX image.
     FROM smoothy/nginx:1.19-1.0.1
 
+    # Copy the nginx configuration into the image.
     COPY static/server.conf /etc/nginx/conf.d/server.conf
+
+    # Copy the source code of the service into the image.
     COPY --from=build-stage /app/src/dist/ /usr/share/nginx/html
     
   static/server.conf: |-

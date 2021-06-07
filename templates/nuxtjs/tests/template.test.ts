@@ -57,6 +57,7 @@ describe('the template can be parsed', () => {
             'build_target': 'static',
             'build_script': 'yarn run generate',
             'path_to_build': 'dist/',
+            'additional_software_script': "apt-get install -y autoreconf",
         }
 
         const parsing = nuxtTemplate.parse('app', 'website', variables);
