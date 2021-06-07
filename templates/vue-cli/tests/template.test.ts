@@ -54,6 +54,7 @@ describe('the template can be parsed', () => {
             'package_manager': 'yarn',
             'build_script': "yarn run build",
             'path_to_build': 'dist/',
+            'additional_software_script': "apt-get install -y autoreconf",
         }
 
         const parsing = vueCliTemplate.parse('app', 'website', variables);

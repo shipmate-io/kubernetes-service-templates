@@ -1,23 +1,41 @@
 files:
 
   Dockerfile: |-
-    FROM node:alpine as build-stage
+    FROM node:16 as build-stage
 
+    # Set the environment variables, if any.
 
+    # Install the additional Linux packages or utilites, if specified.
+    RUN apt-get update \
+     && (apt-get install -y autoreconf) \
+     && apt-get clean \
+     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+    # Create the directory to copy the source code to.
     RUN mkdir -p /app/
+
+    # CD into the directory.
     WORKDIR /app/
 
+    # Copy the locked dependency manifest into the directory and install the dependencies using the specified package manager.
     COPY code-repository/package*.json code-repository/yarn.* /app/
     RUN yarn install --silent
 
+    # Copy the source code of the service into the directory.
     COPY code-repository/ /app/
 
+    # Copy the source code of the shared libraries into the directory.
 
+    # Run the specified build assets script.
     RUN yarn run build
 
+    # Switch to the NGINX image.
     FROM smoothy/nginx:1.19-1.0.1
 
+    # Copy the nginx configuration into the image.
     COPY server.conf /etc/nginx/conf.d/server.conf
+
+    # Copy the source code of the service into the image.
     COPY --from=build-stage /app/dist/ /usr/share/nginx/html
 
   server.conf: |-

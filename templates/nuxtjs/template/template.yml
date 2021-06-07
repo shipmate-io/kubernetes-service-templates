@@ -60,8 +60,10 @@ form:
         type: code
         default:
           switch:
-            - case: "{{ variable.build_target == 'static' }}"
-              value: "{{ variable.package_manager }} run generate"
+            - case: "{{ variable.build_target == 'static' and variable.package_manager == 'npm' }}"
+              value: npm run generate
+            - case: "{{ variable.build_target == 'static' and variable.package_manager == 'yarn' }}"
+              value: yarn run generate
             # TODO - case: "{{ variable.build_target == 'server' }}"
             # TODO   value: "{{ variable.package_manager }} run build"
 
@@ -71,6 +73,17 @@ form:
         required: true
         type: file_path
         default: dist/
+
+  - name: Operating system
+    questions:
+
+      - type: code
+        name: Additional software
+        description: >
+          The installation script for the additional Linux packages or utilities the service needs, if any. Within the 
+          script, you can use any default Linux Debian utility, including the apt package manager. Multi-line commands
+          and comments are not allowed in the script.
+        variable: additional_software_script
 
 deployment:
 
