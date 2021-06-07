@@ -1,8 +1,8 @@
 api: v1
 
 meta:
-  name: Vue CLI
-  description: Deploy your Vue.js service built with Vue CLI on a Kubernetes cluster.
+  name: Vue.js
+  description: JavaScript service using the Vue.js framework and Vue CLI
 
 form:
 
@@ -13,7 +13,7 @@ form:
         description: The directory in the Git repository that contains the source code of the service.
         variable: path_to_source_code
         type: file_path
-        default: ''
+        default: /
 
       - name: Paths to shared libraries
         description: >

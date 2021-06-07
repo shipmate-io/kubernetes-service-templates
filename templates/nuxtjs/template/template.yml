@@ -2,7 +2,7 @@ api: v1
 
 meta:
   name: Nuxt.js
-  description: Deploy a Nuxt.js service on a Kubernetes cluster.
+  description: JavaScript service using the Nuxt.js framework
 
 form:
 
@@ -15,7 +15,7 @@ form:
           For example: "/services/web-client".
         variable: path_to_source_code
         type: file_path
-        default: '/'
+        default: /
 
       - name: Paths to shared libraries
         description: >

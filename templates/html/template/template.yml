@@ -2,7 +2,7 @@ api: v1
 
 meta:
   name: HTML
-  description: Deploy your static HTML website on a Kubernetes cluster.
+  description: Static HTML service
 
 form:
 

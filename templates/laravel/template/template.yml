@@ -2,7 +2,7 @@ api: v1
 
 meta:
   name: Laravel
-  description: The PHP Framework for Web Artisans
+  description: PHP service using the Laravel framework
 
 form:
 
@@ -16,7 +16,7 @@ form:
           For example: "/services/billing".
         variable: path_to_source_code
         required: false
-        default: ''
+        default: /
 
       - type: file_paths
         name: Paths to shared libraries
