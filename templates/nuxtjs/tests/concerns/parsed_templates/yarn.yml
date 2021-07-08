@@ -86,6 +86,10 @@ template:
       id: app-service-website-image-nuxtjs-static
       name: nuxtjs_static
       dockerfile: static/Dockerfile
+      files:
+        - code-repository/**
+        - static/server.conf
+        - static/Dockerfile
       arguments: []
 
     - type: stateless_set

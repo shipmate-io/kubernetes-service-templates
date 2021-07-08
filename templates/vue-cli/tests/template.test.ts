@@ -29,7 +29,7 @@ describe('the template can be parsed', () => {
     test('with npm as package manager', async () => {
 
         const variables = {
-            'path_to_source_code': 'src/',
+            'path_to_source_code': 'vue/',
             'package_manager': 'npm',
             'build_script': "npm run build\nnpm run optimize",
             'path_to_build': 'dist/',
@@ -110,7 +110,7 @@ describe("the service works correctly when installed", () => {
             await cluster.stop()
         }
 
-    }, 1000 * 60 * 4)
+    }, 1000 * 60 * 5)
 
     test('with yarn as package manager', async () => {
 
@@ -148,6 +148,6 @@ describe("the service works correctly when installed", () => {
             await cluster.stop()
         }
 
-    }, 1000 * 60 * 4)
+    }, 1000 * 60 * 5)
 
 })

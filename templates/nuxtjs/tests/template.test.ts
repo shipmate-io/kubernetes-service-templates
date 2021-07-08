@@ -116,7 +116,7 @@ describe('the service works correctly when installed', () => {
             await cluster.stop()
         }
 
-    }, 1000 * 60 * 4)
+    }, 1000 * 60 * 5)
 
     test('with yarn as package manager', async () => {
 
@@ -159,6 +159,6 @@ describe('the service works correctly when installed', () => {
             await cluster.stop()
         }
 
-    }, 1000 * 60 * 4)
+    }, 1000 * 60 * 5)
 
 })

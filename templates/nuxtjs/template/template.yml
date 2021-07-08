@@ -90,6 +90,11 @@ deployment:
   - type: image
     name: nuxtjs_static
     dockerfile: static/Dockerfile
+    files:
+      - "{{ path('code-repository', variable.path_to_source_code, '**') }}"
+      - path: "{{ path('code-repository', loop.value, '**') }}"
+        loop: "{{ variable.paths_to_shared_libraries }}"
+      - static/server.conf
     arguments:
       - map: "{{ environment }}"
     if: "{{ variable.build_target == 'static' }}"

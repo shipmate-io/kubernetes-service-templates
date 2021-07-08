@@ -86,6 +86,10 @@ template:
       id: app-service-website-image-vue
       name: vue
       dockerfile: Dockerfile
+      files:
+        - code-repository/**
+        - server.conf
+        - Dockerfile
       arguments: []
 
     - type: stateless_set

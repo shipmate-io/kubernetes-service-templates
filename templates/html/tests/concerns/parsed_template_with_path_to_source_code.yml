@@ -66,11 +66,14 @@ template:
       id: app-service-website-image-html
       name: html
       dockerfile: Dockerfile
+      files:
+        - code-repository/src/**
+        - server.conf
+        - Dockerfile
 
     - type: stateless_set
       id: website-stateless-set-html
       name: html
-      replicas: 1
       update_strategy: rolling_update
       containers:
         - id: website-stateless-set-html-container-html

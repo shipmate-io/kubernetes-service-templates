@@ -84,6 +84,10 @@ template:
       id: app-service-website-image-nuxtjs-static
       name: nuxtjs_static
       dockerfile: static/Dockerfile
+      files:
+        - code-repository/src/**
+        - static/server.conf
+        - static/Dockerfile
       arguments:
         - name: NUXT_ENV_API_HOST
           value: abc123

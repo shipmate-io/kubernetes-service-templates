@@ -185,6 +185,12 @@ template:
       id: app-service-backend-image-laravel
       name: laravel
       dockerfile: php/Dockerfile
+      files:
+        - code-repository/services/laravel/**
+        - code-repository/libraries/ui-components/**
+        - php/init.sh
+        - php/run.sh
+        - php/Dockerfile
       arguments:
         - name: PRIVATE_COMPOSER_REGISTRY_URL_0
           value: private.packagist.com
@@ -192,11 +198,16 @@ template:
           value: john.doe@example.com
         - name: PRIVATE_COMPOSER_REGISTRY_PASSWORD_0
           value: secret
-    
+
     - type: image
       id: app-service-backend-image-nginx
       name: nginx
       dockerfile: nginx/Dockerfile
+      files:
+        - code-repository/services/laravel/**
+        - code-repository/libraries/ui-components/**
+        - nginx/server.conf
+        - nginx/Dockerfile
 
     - type: stateless_set
       id: backend-stateless-set-laravel

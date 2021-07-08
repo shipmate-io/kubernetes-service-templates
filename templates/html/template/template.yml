@@ -21,6 +21,9 @@ deployment:
   - type: image
     name: html
     dockerfile: Dockerfile
+    files:
+      - "{{ path('code-repository', variable.path_to_source_code, '**') }}"
+      - server.conf
 
   - type: stateless_set
     name: html

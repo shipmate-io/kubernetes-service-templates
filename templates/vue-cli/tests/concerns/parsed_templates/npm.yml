@@ -10,17 +10,17 @@ files:
     # Install the additional Linux packages or utilites, if specified.
 
     # Create the directory to copy the source code to.
-    RUN mkdir -p /app/src/
+    RUN mkdir -p /app/vue/
 
     # CD into the directory.
-    WORKDIR /app/src/
+    WORKDIR /app/vue/
 
     # Copy the locked dependency manifest into the directory and install the dependencies using the specified package manager.
-    COPY code-repository/src/package*.json /app/src/
+    COPY code-repository/vue/package*.json /app/vue/
     RUN npm install --silent
 
     # Copy the source code of the service into the directory.
-    COPY code-repository/src/ /app/src/
+    COPY code-repository/vue/ /app/vue/
 
     # Copy the source code of the shared libraries into the directory.
 
@@ -35,7 +35,7 @@ files:
     COPY server.conf /etc/nginx/conf.d/server.conf
 
     # Copy the source code of the service into the image.
-    COPY --from=build-stage /app/src/dist/ /usr/share/nginx/html
+    COPY --from=build-stage /app/vue/dist/ /usr/share/nginx/html
     
   server.conf: |-
     server {
@@ -85,6 +85,10 @@ template:
       id: app-service-website-image-vue
       name: vue
       dockerfile: Dockerfile
+      files:
+        - code-repository/vue/**
+        - server.conf
+        - Dockerfile
       arguments:
         - name: VUE_APP_API_HOST
           value: abc123
