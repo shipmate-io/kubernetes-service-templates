@@ -51,13 +51,13 @@ RUN {{ command }}
 # Switch to the php image.
 FROM php-stage AS production-stage
 
-# Copy the init.sh script into the image.
 {% if variable.release_script %}
+# Copy the init.sh script into the image.
 COPY --chown=smoothy:smoothy php/init.sh /scripts/init.sh
-{% endif %}
 
 # Make the scripts executable to users of the smoothy group.
 RUN chmod -R 775 /scripts
+{% endif %}
 
 # Copy the run.sh entrypoint into the image.
 COPY --chown=smoothy:smoothy php/run.sh /entrypoints/run.sh
