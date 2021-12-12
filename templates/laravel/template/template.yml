@@ -168,12 +168,6 @@ form:
           sleep 60s
           php artisan migrate --force
 
-      - type: boolean
-        name: Create endpoint
-        description: >
-          If enabled, an HTTPS endpoint will be automatically created that exposes the service to the www.
-        variable: create_endpoint
-
 deployment:
 
   - type: image
@@ -308,7 +302,6 @@ deployment:
     target: "{* stateless_set.nginx *}"
     port: 8080
     protocol: HTTPS
-    public: "{{ variable.create_endpoint }}"
 
 interface:
 
