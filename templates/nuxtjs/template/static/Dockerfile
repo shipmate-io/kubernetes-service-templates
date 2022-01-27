@@ -21,6 +21,11 @@ RUN mkdir -p {{ path('/app/', variable.path_to_source_code) }}
 # CD into the directory.
 WORKDIR {{ path('/app/', variable.path_to_source_code) }}
 
+# Copy the npmrc configuration into the image to authenticate with private NPM registries.
+{% if variable.private_npm_registries %}
+COPY static/.npmrc {{ path('/app/', variable.path_to_source_code, '/') }}
+{% endif %}
+
 # Copy the locked dependency manifest into the directory and install the dependencies using the specified package manager.
 {% if variable.package_manager == 'npm' %}
 COPY {{ path('code-repository/', variable.path_to_source_code, '/package*.json') }} {{ path('/app/', variable.path_to_source_code, '/') }}

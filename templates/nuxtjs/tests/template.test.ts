@@ -32,6 +32,13 @@ describe('the template can be parsed', () => {
         const variables = {
             'path_to_source_code': 'src/',
             'package_manager': 'npm',
+            'private_npm_registries': [
+                {
+                    'url': 'https://npm.pkg.github.com/',
+                    'scope': '@spatie',
+                    'auth_token': '5tS2O6eqzCMykMk9zF0za8L2QMbQGbbR',
+                }
+            ],
             'build_target': 'static',
             'build_script': "npm run generate",
             'path_to_build': 'dist/',

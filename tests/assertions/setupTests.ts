@@ -134,7 +134,7 @@ expect.extend({
             };
         } catch (error) {
             return {
-                pass: true,
+                pass: false,
                 message: () => `The template could not be parsed.\n\nProblem: ${JSON.stringify(error?.errors)}`,
             };
         }
@@ -148,7 +148,7 @@ expect.extend({
             actualTemplate = await parsing
         } catch (error) {
             return {
-                pass: true,
+                pass: false,
                 message: () => `The template could not be parsed.\n\nProblem: ${JSON.stringify(error?.errors)}`,
             };
         }

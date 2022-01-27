@@ -34,7 +34,7 @@ export default class Cluster
 
     public async start(): Promise<this>
     {
-        const hostPorts = this.ports.map((port: Number) => `-p "${port}:${port}@agent[0]"`).join(' ')
+        const hostPorts = this.ports.map((port: Number) => `-p "${port}:${port}@agent:0"`).join(' ')
 
         await exec(`k3d cluster create ${this.id} ${hostPorts} --agents 1`)
 

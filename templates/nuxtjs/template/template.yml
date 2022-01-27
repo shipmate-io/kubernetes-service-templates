@@ -41,6 +41,28 @@ form:
             value: yarn
         default: npm
 
+      - type: structs
+        name: Private NPM registries
+        description: >
+          The private NPM registries that host the private NPM packages of the service, if any.
+        variable: private_npm_registries
+        questions:
+          - type: string
+            name: URL
+            description: The URL of the private registry.
+            variable: url
+            required: true
+          - type: string
+            name: Scope
+            description: "The scope of the packages stored in the private registry. For example: @fortawesome"
+            variable: scope
+            required: true
+          - type: password
+            name: Authentication token
+            description: The authentication token that should be used to authenticate with the private registry.
+            variable: auth_token
+            required: true
+
       - name: Build target
         description: The type of build to create for the service.
         variable: build_target
