@@ -13,7 +13,7 @@ export default class Cluster
 
     constructor()
     {
-        this.id = 'smoothy-'+uuidv4().substring(0, 8)
+        this.id = 'cody-'+uuidv4().substring(0, 8)
 
         const minPort = 30000
         const maxPort = 32767
@@ -42,7 +42,7 @@ export default class Cluster
     }
 
     public async installTemplate(
-        template: Template, codeRepositoryPath: string|null, variables: Variables = {}, environment: Variables = {}, 
+        template: Template, codeRepositoryPath: string|null, variables: Variables = {}, environment: Variables = {},
         initializationTimeInSeconds: number = 30
     ): Promise<TemplateService>
     {

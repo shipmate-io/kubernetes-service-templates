@@ -13,10 +13,10 @@ export default class Service
     }
 
     // getters
-    
+
     public getStatelessSet(name: string): StatelessSet|null
     {
-        for(const resource of this.parsedTemplate.template.deployment) {
+        for(const resource of this.parsedTemplate.deployment) {
             if(resource.type !== 'stateless_set') continue
             if(resource.name === name) return resource
         }
@@ -26,7 +26,7 @@ export default class Service
 
     public getEntrypoint(name: string): Entrypoint|null
     {
-        for(const resource of this.parsedTemplate.template.deployment) {
+        for(const resource of this.parsedTemplate.deployment) {
             if(resource.type !== 'entrypoint') continue
             if(resource.name === name) return resource
         }
@@ -35,7 +35,7 @@ export default class Service
     }
 
     // logs
-    
+
     public async getLogsOfStatelessSet(name: string): Promise<string>
     {
         return this.getLogsOfResource('stateless_set', name);
@@ -50,7 +50,7 @@ export default class Service
     {
         let resource = null;
 
-        for(const iterator of this.parsedTemplate.template.deployment) {
+        for(const iterator of this.parsedTemplate.deployment) {
             if(iterator.type !== type) continue
             if(iterator.name === name) {
                 resource = iterator;
@@ -69,7 +69,7 @@ export default class Service
         const k8sCoreV1Api = kc.makeApiClient(k8s.CoreV1Api);
 
         const pods = await k8sCoreV1Api
-            .listNamespacedPod('default', undefined, undefined, undefined, undefined, `smoothy/managed-by=${resource.id}`)
+            .listNamespacedPod('default', undefined, undefined, undefined, undefined, `cody/managed-by=${resource.id}`)
             .then(response => response.body.items);
 
         if(pods.length === 0 || ! pods[0].metadata?.name) {

@@ -1,6 +1,4 @@
-import fs from 'fs'
-import FormData from 'form-data'
-import SmoothyApi from '@/api/SmoothyApi'
+import CodyApi from '@/api/CodyApi'
 import ZipTemplate from '@/actions/ZipTemplate'
 import ApiError from '@/api/ApiError'
 
@@ -8,14 +6,10 @@ export class ValidateTemplate
 {
     async execute(templatePath: string): Promise<ApiError|null>
     {
-        const pathToZipFile: string = await (new ZipTemplate).execute(templatePath)
-
-        const form = new FormData()
-        
-        form.append('template', fs.createReadStream(pathToZipFile))
+        const pathToZipFile: string = await (new ZipTemplate).execute(templatePath, true)
 
         try {
-            await (new SmoothyApi).validateTemplate(form)
+            await (new CodyApi).validateTemplate(pathToZipFile)
         } catch (error) {
             return error
         }

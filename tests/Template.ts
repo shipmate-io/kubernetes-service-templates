@@ -1,5 +1,6 @@
-import ParseTemplate from './actions/ParseTemplate'
 import { ParsedTemplate, Variables } from '@/types'
+import ZipTemplate from "@/actions/ZipTemplate";
+import CodyApi from "@/api/CodyApi";
 
 export default class Template
 {
@@ -14,13 +15,13 @@ export default class Template
     {
         return this.templatePath
     }
-    
+
     public async parse(
-        applicationSlug: string, serviceName: string, variables: Variables = {}, environment: Variables = {}
+        environmentSlug: string, serviceName: string, variables: Variables = {}, environment: Variables = {}
     ): Promise<ParsedTemplate>
     {
-        return await (new ParseTemplate).execute(
-            applicationSlug, serviceName, this.templatePath, 'latest', variables, environment
-        )
+        const pathToZipFile = await (new ZipTemplate).execute(this.templatePath, false)
+
+        return await (new CodyApi).parseTemplate(environmentSlug, serviceName, pathToZipFile, variables, environment)
     }
 }

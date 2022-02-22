@@ -44,7 +44,7 @@ export default class MysqlService
             spec: {
                 selector: {
                     matchLabels: {
-                        'smoothy/managed-by': 'mysql'
+                        'cody/managed-by': 'mysql'
                     }
                 },
                 replicas: 1,
@@ -54,7 +54,7 @@ export default class MysqlService
                 template: {
                     metadata: {
                         labels: {
-                            'smoothy/managed-by': 'mysql',
+                            'cody/managed-by': 'mysql',
                         }
                     },
                     spec: {
@@ -83,10 +83,10 @@ export default class MysqlService
             },
             spec: {
                 selector: {
-                    'smoothy/managed-by': 'mysql'
+                    'cody/managed-by': 'mysql'
                 },
                 ports: [
-                    { 
+                    {
                         port: 3306
                     }
                 ]

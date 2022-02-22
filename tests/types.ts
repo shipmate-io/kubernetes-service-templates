@@ -2,36 +2,23 @@
  * Template
  */
 
-export interface ImportedTemplate {
-    details: PrivateTemplateDetails
-    versions: Record<string, PrivateTemplate>
-}
-
-export interface PrivateTemplateDetails {
-    cloud_service_type: "docker_server" | "kubernetes_cluster";
-    meta: Record<string, any>;
-    versions: string[];
-    private?: boolean;
-    template_name?: string;
-    path?: string;
-}
-
-export interface PrivateTemplate extends ParsedTemplate {
-    template_name: string;
-    template_version: string;
+export interface File {
+    path: string
+    contents: string
 }
 
 export interface ParsedTemplate {
-    template: TemplateSpec;
-    files: TemplateFiles;
-}
-
-export interface TemplateSpec {
+    name: string
+    version: string
+    alias: string
+    description: string
+    icon: string|null
+    api: 'v1'
+    form: any
     deployment: Resource[]
-    interface: Interface
+    interfaces: Interface[]
+    files: File[];
 }
-
-export type TemplateFiles = Record<string, string>
 
 /*
  * Variables
@@ -123,8 +110,8 @@ export interface Container {
 }
 
 export interface ComputeResource {
-    min: number;
-    max: number;
+    minimum: number;
+    maximum: number;
 }
 
 export interface EnvironmentVariable {
@@ -149,24 +136,24 @@ export interface Entrypoint {
     alias: string|null;
     description: string|null;
     target: EntrypointTarget;
-    protocol: "TCP"|"UDP";
+    protocol: "TCP"|"UDP"|"HTTPS";
     port: number;
     host_port?: number;
 }
 
-interface EntrypointTarget {
-    type: "stateless_set"|"stateful_set";
-    id: string;
+type EntrypointTarget = EntrypointSetTarget
+
+interface EntrypointSetTarget {
+    type: string
+    set_type: string
+    set_id: string
 }
 
 /*
  * Interfaces
  */
 
-export interface Interface {
-    logs?: LogInterface[]
-    volumes?: VolumeInterface[]
-}
+export type Interface = LogInterface | VolumeInterface
 
 export interface LogInterface {
     //

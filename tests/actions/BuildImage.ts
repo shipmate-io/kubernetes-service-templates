@@ -6,7 +6,7 @@ import Docker from 'dockerode'
 import mkdirp from 'mkdirp'
 import rimraf from 'rimraf'
 import tarfs from 'tar-fs'
-import { ParsedTemplate, TemplateFiles, Image } from '@/types'
+import { ParsedTemplate, Image } from '@/types'
 
 interface ProgressEvent {
     error?: string;
@@ -30,7 +30,7 @@ class BuildImage
 
             await this.copyCodeRepositoryContentsToBuildFolder(codeRepositoryPath, image, buildDirectory)
 
-            this.copyImageFilesToBuildFolder(template.files, buildDirectory)
+            this.copyImageFilesToBuildFolder(template, buildDirectory)
 
             const stream: NodeJS.ReadableStream = await this.buildImage(image, buildDirectory)
 
@@ -53,12 +53,12 @@ class BuildImage
         await exec(`rsync -azP --delete --exclude='.git' --filter=":- .gitignore" ${codeRepositoryPath}/. ${buildDirectory.name}/code-repository/`)
     }
 
-    copyImageFilesToBuildFolder(files: TemplateFiles, buildDirectory: Directory): void
+    copyImageFilesToBuildFolder(template: ParsedTemplate, buildDirectory: Directory): void
     {
-        for (const [path, contents] of Object.entries(files)) {
-            const folderPath = path.substring(0, path.lastIndexOf("/"))
+        for (const file of template.files) {
+            const folderPath = file.path.substring(0, file.path.lastIndexOf("/"))
             mkdirp.sync(`${buildDirectory.name}/${folderPath}`)
-            fs.writeFileSync(`${buildDirectory.name}/${path}`, contents)
+            fs.writeFileSync(`${buildDirectory.name}/${file.path}`, file.contents)
         }
     }
 

@@ -1,4 +1,3 @@
-import _ from 'lodash'
 // @ts-ignore
 import exec from 'await-exec'
 import { Base64 } from 'js-base64';
@@ -10,7 +9,7 @@ import { Volume, Container, Image, Entrypoint, ConfigFile, ParsedTemplate, State
 export class InstallTemplate
 {
     public async execute(
-        clusterId: string, hostPorts: number[], template: ParsedTemplate, codeRepositoryPath: string|null, 
+        clusterId: string, hostPorts: number[], template: ParsedTemplate, codeRepositoryPath: string|null,
         initializationTimeInSeconds: number
     ): Promise<void>
     {
@@ -23,7 +22,7 @@ export class InstallTemplate
         const k8sCoreV1Api = kc.makeApiClient(k8s.CoreV1Api);
         const k8sAppsV1Api = kc.makeApiClient(k8s.AppsV1Api);
         const k8sBatchV1Api = kc.makeApiClient(k8s.BatchV1Api);
-        
+
         await this.createVolumes(k8sCoreV1Api, template)
         await this.createConfigFiles(k8sCoreV1Api, template)
         await this.createStatelessSets(k8sCoreV1Api, k8sAppsV1Api, template)
@@ -41,7 +40,7 @@ export class InstallTemplate
     {
         const images: Image[] = []
 
-        for(const resource of template.template.deployment) {
+        for(const resource of template.deployment) {
             if(resource.type !== 'image') continue
             images.push(resource)
         }
@@ -62,7 +61,7 @@ export class InstallTemplate
     {
         const volumes: Volume[] = []
 
-        for(const resource of template.template.deployment) {
+        for(const resource of template.deployment) {
             if(resource.type !== 'volume') continue
             volumes.push(resource)
         }
@@ -90,7 +89,7 @@ export class InstallTemplate
     {
         const configFiles: ConfigFile[] = []
 
-        for(const resource of template.template.deployment) {
+        for(const resource of template.deployment) {
             if(resource.type !== 'config_file') continue
             configFiles.push(resource)
         }
@@ -113,7 +112,7 @@ export class InstallTemplate
     {
         const statelessSets: StatelessSet[] = []
 
-        for(const resource of template.template.deployment) {
+        for(const resource of template.deployment) {
             if(resource.type !== 'stateless_set') continue
             statelessSets.push(resource)
         }
@@ -134,7 +133,7 @@ export class InstallTemplate
                 spec: {
                     selector: {
                         matchLabels: {
-                            'smoothy/managed-by': statelessSet.id,
+                            'cody/managed-by': statelessSet.id,
                         }
                     },
                     replicas: 1,
@@ -144,7 +143,7 @@ export class InstallTemplate
                     template: {
                         metadata: {
                             labels: {
-                                'smoothy/managed-by': statelessSet.id,
+                                'cody/managed-by': statelessSet.id,
                             }
                         },
                         spec: {
@@ -167,7 +166,7 @@ export class InstallTemplate
     {
         const cronJobs: CronJob[] = []
 
-        for(const resource of template.template.deployment) {
+        for(const resource of template.deployment) {
             if(resource.type !== 'cron_job') continue
             cronJobs.push(resource)
         }
@@ -189,7 +188,7 @@ export class InstallTemplate
                     template: {
                         metadata: {
                             labels: {
-                                'smoothy/managed-by': `${cronJob.id}`,
+                                'cody/managed-by': `${cronJob.id}`,
                             }
                         },
                         spec: {
@@ -209,7 +208,7 @@ export class InstallTemplate
     {
         const jobs: Job[] = []
 
-        for(const resource of template.template.deployment) {
+        for(const resource of template.deployment) {
             if(resource.type !== 'job') continue
             jobs.push(resource)
         }
@@ -231,7 +230,7 @@ export class InstallTemplate
                     template: {
                         metadata: {
                             labels: {
-                                'smoothy/managed-by': job.id,
+                                'cody/managed-by': job.id,
                             }
                         },
                         spec: {
@@ -261,7 +260,7 @@ export class InstallTemplate
             }
         });
 
-        const environmentVariables = (container.environment ?? []).map((environmentVariable): k8s.V1EnvVar => {                
+        const environmentVariables = (container.environment ?? []).map((environmentVariable): k8s.V1EnvVar => {
             return {
                 name: environmentVariable.name,
                 valueFrom: {
@@ -293,12 +292,12 @@ export class InstallTemplate
             env: environmentVariables,
             resources: {
                 requests: {
-                    cpu: `${container.cpus.min}m`,
-                    memory: `${container.memory.min}Mi`,
+                    cpu: `${container.cpus.minimum}m`,
+                    memory: `${container.memory.minimum}Mi`,
                 },
                 limits: {
-                    cpu: `${container.cpus.max}m`,
-                    memory: `${container.memory.max}Mi`,
+                    cpu: `${container.cpus.maximum}m`,
+                    memory: `${container.memory.maximum}Mi`,
                 }
             }
         }
@@ -331,13 +330,19 @@ export class InstallTemplate
     {
         const entrypoints: Entrypoint[] = []
 
-        for(const resource of template.template.deployment) {
+        for(const resource of template.deployment) {
             if(resource.type !== 'entrypoint') continue
             resource.host_port = hostPorts.pop()
             entrypoints.push(resource)
         }
 
         for(const entrypoint of entrypoints) {
+            let protocol = entrypoint.protocol
+
+            if(protocol === 'HTTPS') {
+                protocol = 'TCP'
+            }
+
             await k8sApi.createNamespacedService('default', {
                 metadata: {
                     name: entrypoint.id
@@ -345,11 +350,11 @@ export class InstallTemplate
                 spec: {
                     type: 'NodePort',
                     selector: {
-                        'smoothy/managed-by': entrypoint.target.id,
+                        'cody/managed-by': entrypoint.target.set_id,
                     },
                     ports: [
                         {
-                            protocol: entrypoint.protocol,
+                            protocol: protocol,
                             port: entrypoint.port,
                             nodePort: entrypoint.host_port
                         }
