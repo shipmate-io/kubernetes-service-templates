@@ -44,7 +44,7 @@ test("the service works correctly when installed without path_to_source_code", a
         const service = await cluster.installTemplate(htmlTemplate, codeRepositoryPath)
 
         await assertThatServiceWorksAsExpected(service)
-        
+
     } finally {
         await cluster.stop()
     }
@@ -64,7 +64,7 @@ test("the service works correctly when installed with path_to_source_code", asyn
         }
 
         const service = await cluster.installTemplate(htmlTemplate, codeRepositoryPath, variables)
-    
+
         await assertThatServiceWorksAsExpected(service)
 
     } finally {
@@ -73,7 +73,7 @@ test("the service works correctly when installed with path_to_source_code", asyn
 
 }, 1000 * 60 * 3)
 
-async function assertThatServiceWorksAsExpected(service: TemplateService) 
+async function assertThatServiceWorksAsExpected(service: TemplateService)
 {
     const host = `http://localhost:${service.getEntrypoint('html')?.host_port}`
 

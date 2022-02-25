@@ -1,4 +1,4 @@
-FROM smoothy/nginx:1.19-1.0.1
+FROM europe-west3-docker.pkg.dev/smoothy-171414/base-images/nginx/1.19:1.0.2
 
 # Copy the nginx configuration into the image.
 COPY server.conf /etc/nginx/conf.d/server.conf

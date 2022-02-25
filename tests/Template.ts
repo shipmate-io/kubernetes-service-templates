@@ -20,8 +20,11 @@ export default class Template
         environmentSlug: string, serviceName: string, variables: Variables = {}, environment: Variables = {}
     ): Promise<ParsedTemplate>
     {
+        const templateName = this.templatePath.split(/[\\/]/).pop() || 'template'
         const pathToZipFile = await (new ZipTemplate).execute(this.templatePath, false)
 
-        return await (new CodyApi).parseTemplate(environmentSlug, serviceName, pathToZipFile, variables, environment)
+        return await (new CodyApi).parseTemplate(
+            environmentSlug, serviceName, templateName, pathToZipFile, variables, environment
+        )
     }
 }

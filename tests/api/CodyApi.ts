@@ -26,7 +26,7 @@ export default class CodyApi {
     }
 
     async parseTemplate(
-        environmentSlug: string, serviceName: string, pathToZipFile: string, variables: Variables,
+        environmentSlug: string, serviceName: string, templateName: string, pathToZipFile: string, variables: Variables,
         environment: Variables
     ): Promise<ParsedTemplate>
     {
@@ -35,6 +35,7 @@ export default class CodyApi {
         form.append('environment_slug', environmentSlug)
         form.append('service_name', serviceName)
         form.append('service_type', 'kubernetes')
+        form.append('template_name', templateName)
         form.append('template', fs.createReadStream(pathToZipFile))
 
         for (const [name, value] of Object.entries(this.transformValueToFormData('variables', variables))) {
@@ -70,7 +71,7 @@ export default class CodyApi {
                 }
             }
         } else {
-            formData[name] = value
+            formData[name] = String(value)
         }
 
         return formData
