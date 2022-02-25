@@ -78,7 +78,8 @@ form:
         value: npm run generate
 
       - name: Path to server
-        description: The path to the Node.js server.
+        description: >
+          The path to the Node.js server file. For example: "/services/web-client/server.js".
         type: file_path
         variable: path_to_server
         value: src/server.js

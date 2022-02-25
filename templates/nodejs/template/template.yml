@@ -86,11 +86,12 @@ form:
               value: yarn run build
 
       - name: Path to server
-        description: The path to the Node.js server.
+        description: >
+          The path to the Node.js server file. For example: "/services/web-client/server.js".
         variable: path_to_server
         required: true
         type: file_path
-        default: server.js
+        default: /server.js
 
   - name: Operating system
     questions:
