@@ -1,8 +1,8 @@
 # Set the php-fpm base image, based on the specified php version.
 {% if variable.php_version == "7.4" %}
-FROM smoothy/php-fpm:7.4-1.0.1 AS php-stage
+FROM europe-west3-docker.pkg.dev/smoothy-171414/base-images/php-fpm/7.4:1.0.2 AS php-stage
 {% elseif variable.php_version == "8.0" %}
-FROM smoothy/php-fpm:8.0-1.0.0 AS php-stage
+FROM europe-west3-docker.pkg.dev/smoothy-171414/base-images/php-fpm/8.0:1.0.1 AS php-stage
 {% endif %}
 
 # Install the additional Linux packages or utilites, if specified.
@@ -17,7 +17,7 @@ RUN apt-get update \
 
 # Build the JavaScript and CSS assets, if specified.
 {% if variable.build_assets %}
-FROM node:alpine AS assets-stage
+FROM node:{{ variable.node_version }}-alpine AS assets-stage
 
 # Create the directory to copy to Laravel source code to.
 RUN mkdir -p {{ path('/app/', variable.path_to_source_code) }}
@@ -53,30 +53,30 @@ FROM php-stage AS production-stage
 
 {% if variable.release_script %}
 # Copy the init.sh script into the image.
-COPY --chown=smoothy:smoothy php/init.sh /scripts/init.sh
+COPY --chown=cody:cody php/init.sh /scripts/init.sh
 
-# Make the scripts executable to users of the smoothy group.
+# Make the scripts executable to users of the cody group.
 RUN chmod -R 775 /scripts
 {% endif %}
 
 # Copy the run.sh entrypoint into the image.
-COPY --chown=smoothy:smoothy php/run.sh /entrypoints/run.sh
+COPY --chown=cody:cody php/run.sh /entrypoints/run.sh
 
 # Copy the source code of the service into the image.
-COPY --chown=smoothy:smoothy {{ path('code-repository/', variable.path_to_source_code, '/') }} {{ path('/var/www', variable.path_to_source_code, '/') }}
+COPY --chown=cody:cody {{ path('code-repository/', variable.path_to_source_code, '/') }} {{ path('/var/www', variable.path_to_source_code, '/') }}
 
 # Copy the source code of the shared libraries into the image.
 {% for path_to_shared_library in variable.paths_to_shared_libraries %}
-COPY --chown=smoothy:smoothy {{ path('code-repository/', path_to_shared_library, '/') }} {{ path('/var/www', path_to_shared_library, '/') }}
+COPY --chown=cody:cody {{ path('code-repository/', path_to_shared_library, '/') }} {{ path('/var/www', path_to_shared_library, '/') }}
 {% endfor %}
 
-# Make the "storage" and "bootstrap/cache" directories writable to users of the smoothy group.
+# Make the "storage" and "bootstrap/cache" directories writable to users of the cody group.
 RUN chmod -R 775 {{ path('/var/www/', variable.path_to_source_code, '/storage') }} \
  && chmod -R 775 {{ path('/var/www/', variable.path_to_source_code, '/bootstrap/cache') }}
 
 # Copy the built JavaScript and CSS assets into the image, if any.
 {% if variable.build_assets %}
-COPY --chown=smoothy:smoothy --from=assets-stage {{ path('/app/', variable.path_to_source_code, '/public') }} {{ path('/var/www/', variable.path_to_source_code, '/public') }}
+COPY --chown=cody:cody --from=assets-stage {{ path('/app/', variable.path_to_source_code, '/public') }} {{ path('/var/www/', variable.path_to_source_code, '/public') }}
 {% endif %}
 
 # CD into the directory containing the source code of the service.

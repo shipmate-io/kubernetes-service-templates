@@ -102,7 +102,7 @@ export interface Container {
     type: "container";
     image: string;
     command?: string[];
-    environment?: EnvironmentVariable[];
+    environment_variables?: EnvironmentVariable[];
     volume_mounts?: VolumeMount[];
     config_file_mounts?: ConfigFileMount[];
     cpus: ComputeResource;

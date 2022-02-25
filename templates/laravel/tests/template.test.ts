@@ -84,8 +84,8 @@ test("the service works correctly when installed", async () => {
             'opcache_enabled': true,
             'maximum_file_upload_size': 25,
             'additional_software_script': `
-    apt-get install -y default-mysql-client
-    `,
+                apt-get install -y default-mysql-client
+            `,
             'timezone': 'Europe/Brussels',
             'run_scheduler': true,
             'daemons': [
@@ -94,7 +94,7 @@ test("the service works correctly when installed", async () => {
             'build_assets': true,
             'package_manager': 'npm',
             'build_assets_script': 'npm run production',
-            'deploy_script': 'php artisan config:cache\nphp artisan route:cache\nphp artisan view:cache',
+            'deploy_script': 'php artisan config:cache\nphp artisan view:cache',
             'release_script': 'sleep 10s\nphp artisan migrate --force',
         }
 

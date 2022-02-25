@@ -61,12 +61,11 @@ export default class MysqlService
                         containers: [
                             {
                                 name: 'mysql',
-                                image: 'mysql:8.0',
-                                args: [
-                                    '--default_authentication_plugin=mysql_native_password'
-                                ],
+                                image: 'mysql/mysql-server:8.0',
                                 env: [
                                     { name: 'MYSQL_ROOT_PASSWORD', value: 'secret' },
+                                    { name: 'MYSQL_ROOT_HOST', value: '%' },
+                                    { name: 'MYSQL_ALLOW_EMPTY_PASSWORD', value: '1' },
                                     { name: 'MYSQL_DATABASE', value: 'application' },
                                 ]
                             }

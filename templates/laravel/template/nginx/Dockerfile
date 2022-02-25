@@ -1,6 +1,6 @@
 # Build the JavaScript and CSS assets, if specified.
 {% if variable.build_assets %}
-FROM node:alpine as assets-stage
+FROM node:{{ variable.node_version }}-alpine as assets-stage
 
 # Create the directory to copy to Laravel source code to.
 RUN mkdir -p {{ path('/app/', variable.path_to_source_code) }}
@@ -32,10 +32,10 @@ RUN {{ command }}
 {% endif %}
 
 # Switch to the nginx image.
-FROM smoothy/nginx:1.19-1.0.1
+FROM europe-west3-docker.pkg.dev/smoothy-171414/base-images/nginx/1.19:1.0.2
 
 # Copy the nginx configuration into the image.
-COPY --chown=smoothy:smoothy nginx/server.conf /etc/nginx/conf.d/server.conf
+COPY --chown=cody:cody nginx/server.conf /etc/nginx/conf.d/server.conf
 
 # Copy the source code of the service into the image.
 {% if variable.build_assets %}

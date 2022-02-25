@@ -260,7 +260,7 @@ export class InstallTemplate
             }
         });
 
-        const environmentVariables = (container.environment ?? []).map((environmentVariable): k8s.V1EnvVar => {
+        const environmentVariables = (container.environment_variables ?? []).map((environmentVariable): k8s.V1EnvVar => {
             return {
                 name: environmentVariable.name,
                 valueFrom: {
@@ -276,7 +276,7 @@ export class InstallTemplate
             metadata: {
                 name: `${container.id}-environment`,
             },
-            data: (container.environment ?? []).reduce((map: Record<string, string>, environmentVariable) => {
+            data: (container.environment_variables ?? []).reduce((map: Record<string, string>, environmentVariable) => {
                 map[environmentVariable.name] = Base64.encode(`${environmentVariable.value}`)
                 return map;
             }, {})
