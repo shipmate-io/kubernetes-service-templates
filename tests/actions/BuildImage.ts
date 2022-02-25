@@ -67,7 +67,7 @@ class BuildImage
         const pack = tarfs.pack(buildDirectory.name)
 
         return await this.docker.buildImage(pack, {
-            dockerfile: image.dockerfile,
+            dockerfile: image.dockerfile_path,
             t: image.id,
             buildargs: (image?.arguments || []).reduce((result: Record<string, any>, argument) => {
                 result[argument.name] = argument.value

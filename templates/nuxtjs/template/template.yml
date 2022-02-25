@@ -29,6 +29,18 @@ form:
   - name: Building configuration
     questions:
 
+      - name: Node version
+        description: The Node.js version used to build the source code.
+        variable: node_version
+        required: true
+        type: select
+        options:
+          - name: 16
+            value: 16
+          - name: 17
+            value: 17
+        default: 16
+
       - name: Package manager
         description: The package manager used to install the Node.js dependencies of the service.
         variable: package_manager

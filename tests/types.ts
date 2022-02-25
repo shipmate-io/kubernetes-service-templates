@@ -36,7 +36,7 @@ export interface Image {
     name: string;
     id: string;
     type: "image";
-    dockerfile: string;
+    dockerfile_path: string;
     code_repository: string;
     arguments: Argument[]
 }
