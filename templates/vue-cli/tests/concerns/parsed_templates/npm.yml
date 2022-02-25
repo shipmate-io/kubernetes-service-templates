@@ -1,126 +1,210 @@
-files:
+name: local:vue-cli
+version: latest
+alias: Vue.js
+description: JavaScript service using the Vue.js framework and Vue CLI
+icon:
+api: v1
+form:
 
-  Dockerfile: |-
-    FROM node:16 as build-stage
+  - name: Source code
+    description:
+    questions:
 
-    # Set the environment variables, if any.
-    ARG VUE_APP_API_HOST
-    ARG VUE_APP_STRIPE_KEY
+      - name: Path to Vue.js source code
+        description: The directory in the Git repository that contains the source code
+          of the service.
+        type: file_path
+        variable: path_to_source_code
+        value: vue/
 
-    # Install the additional Linux packages or utilites, if specified.
+      - name: Paths to shared libraries
+        description: >
+          If the service uses one or more shared libraries that are stored
+          in the Git repository outside of its source  directory, you should specify the
+          absolute paths to these libraries here. For example: "/libraries/ui-components".
+        type: file_paths
+        variable: paths_to_shared_libraries
+        value: []
 
-    # Create the directory to copy the source code to.
-    RUN mkdir -p /app/vue/
+  - name: Building configuration
+    description:
+    questions:
 
-    # CD into the directory.
-    WORKDIR /app/vue/
+      - name: Node version
+        description: The Node.js version used to build the source code.
+        type: select
+        variable: node_version
+        value: 16
 
-    # Copy the locked dependency manifest into the directory and install the dependencies using the specified package manager.
-    COPY code-repository/vue/package*.json /app/vue/
-    RUN npm install --silent
+      - name: Package manager
+        description: The package manager used to install the Node.js dependencies of the
+          service.
+        type: select
+        variable: package_manager
+        value: npm
 
-    # Copy the source code of the service into the directory.
-    COPY code-repository/vue/ /app/vue/
+      - name: Build script
+        description: The script to build the service.
+        type: code
+        variable: build_script
+        value: |-
+          npm run build
+          npm run optimize
 
-    # Copy the source code of the shared libraries into the directory.
+      - name: Path to build
+        description: The directory in which the build of the service is stored by the
+          build script.
+        type: file_path
+        variable: path_to_build
+        value: dist/
 
-    # Run the specified build assets script.
-    RUN npm run build
-    RUN npm run optimize
+  - name: Operating system
+    description:
+    questions:
 
-    # Switch to the NGINX image.
-    FROM smoothy/nginx:1.19-1.0.1
+      - name: Additional software
+        description: >
+          The installation script for the additional Linux packages or utilities
+          the service needs, if any. Within the  script, you can use any default Linux
+          Debian utility, including the apt package manager. Multi-line commands and comments
+          are not allowed in the script.
+        type: code
+        variable: additional_software_script
+        value:
 
-    # Copy the nginx configuration into the image.
-    COPY server.conf /etc/nginx/conf.d/server.conf
+deployment:
 
-    # Copy the source code of the service into the image.
-    COPY --from=build-stage /app/vue/dist/ /usr/share/nginx/html
-    
-  server.conf: |-
-    server {
-        listen 8080;
-        listen [::]:8080 default ipv6only=on;
-        server_name _;
+  - type: image
+    id: app-service-website-image-vue
+    name: vue
+    dockerfile_path: Dockerfile
+    file_paths:
+      - code-repository/vue/**
+      - server.conf
+      - Dockerfile
+    arguments:
+      - name: VUE_APP_API_HOST
+        value: abc123
+      - name: VUE_APP_STRIPE_KEY
+        value: xyz789
 
-        root /usr/share/nginx/html;
-        index index.html;
-        error_page 404 /404.html;
-        charset utf-8;
+  - type: stateless_set
+    id: website-stateless-set-vue
+    name: vue
+    auto_scaling:
+      min_replicas: 1
+      max_replicas: 20
+      metrics:
+        - type: cpu_utilization
+          target: 60
+    update_strategy: rolling_update
+    containers:
+      - id: website-stateless-set-vue-container-vue
+        name: vue
+        image: app-service-website-image-vue
+        memory:
+          minimum: 32
+          maximum: 256
+        cpus:
+          minimum: 50
+          maximum: 500
 
-        add_header X-Frame-Options "sameorigin";
-        add_header X-XSS-Protection "1; mode=block";
-        add_header X-Content-Type-Options "nosniff";
+  - type: entrypoint
+    id: website-entrypoint-vue
+    name: vue
+    alias: Vue.js service
+    description:
+    target:
+      type: set_target
+      set_type: stateless_set
+      set_id: website-stateless-set-vue
+    protocol: HTTPS
+    port: 8080
 
-        location = /favicon.ico {
-            log_not_found off;
-        }
-
-        location = /robots.txt  {
-            log_not_found off;
-        }
-
-        location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
-          expires 1M;
-          add_header Cache-Control public;
-          add_header Pragma public;
-          add_header Vary Accept-Encoding;
-        }
-
-        location / {
-            try_files $uri $uri/ /index.html =404;
-        }
-
-        location ~ /\. {
-            log_not_found off;
-            deny all;
-        }
-    }
-
-template:
-
-  deployment:
-
-    - type: image
-      id: app-service-website-image-vue
-      name: vue
-      dockerfile: Dockerfile
-      files:
-        - code-repository/vue/**
-        - server.conf
-        - Dockerfile
-      arguments:
-        - name: VUE_APP_API_HOST
-          value: abc123
-        - name: VUE_APP_STRIPE_KEY
-          value: xyz789
-
-    - type: stateless_set
-      name: vue
+interfaces:
+  - type: logs
+    name: NGINX error logs
+    description:
+    source:
+      type: stateless_set
       id: website-stateless-set-vue
-      containers:
-        - name: vue
-          image: app-service-website-image-vue
-          memory:
-            min: 32
-            max: 256
-          cpus:
-            min: 50
-            max: 500
 
-    - type: entrypoint
-      id: website-entrypoint-vue
-      name: vue
-      alias: Vue.js service
-      target:
-        id: website-stateless-set-vue
-        type: stateless_set
-      port: 8080
+files:
+  - path: Dockerfile
+    contents: |-
+      FROM node:16 as build-stage
+      
+      # Set the environment variables, if any.
+      ARG VUE_APP_API_HOST
+      ARG VUE_APP_STRIPE_KEY
+      
+      # Install the additional Linux packages or utilites, if specified.
+      
+      # Create the directory to copy the source code to.
+      RUN mkdir -p /app/vue/
+      
+      # CD into the directory.
+      WORKDIR /app/vue/
+      
+      # Copy the locked dependency manifest into the directory and install the dependencies using the specified package manager.
+      COPY code-repository/vue/package*.json /app/vue/
+      RUN npm install --silent
+      
+      # Copy the source code of the service into the directory.
+      COPY code-repository/vue/ /app/vue/
+      
+      # Copy the source code of the shared libraries into the directory.
+      
+      # Run the specified build assets script.
+      RUN npm run build
+      RUN npm run optimize
+      
+      # Switch to the NGINX image.
+      FROM europe-west3-docker.pkg.dev/smoothy-171414/base-images/nginx/1.19:1.0.2
+      
+      # Copy the nginx configuration into the image.
+      COPY server.conf /etc/nginx/conf.d/server.conf
+      
+      # Copy the source code of the service into the image.
+      COPY --from=build-stage /app/vue/dist/ /usr/share/nginx/html
 
-  interface:
-
-    - type: logs
-      name: NGINX error logs
-      source:
-        id: website-stateless-set-vue
-        type: stateless_set
+  - path: server.conf
+    contents: |-
+      server {
+          listen 8080;
+          listen [::]:8080 default ipv6only=on;
+          server_name _;
+      
+          root /usr/share/nginx/html;
+          index index.html;
+          error_page 404 /404.html;
+          charset utf-8;
+      
+          add_header X-Frame-Options "sameorigin";
+          add_header X-XSS-Protection "1; mode=block";
+          add_header X-Content-Type-Options "nosniff";
+      
+          location = /favicon.ico {
+              log_not_found off;
+          }
+      
+          location = /robots.txt  {
+              log_not_found off;
+          }
+      
+          location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+            expires 1M;
+            add_header Cache-Control public;
+            add_header Pragma public;
+            add_header Vary Accept-Encoding;
+          }
+      
+          location / {
+              try_files $uri $uri/ /index.html =404;
+          }
+      
+          location ~ /\. {
+              log_not_found off;
+              deny all;
+          }
+      }

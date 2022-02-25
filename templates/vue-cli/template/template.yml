@@ -18,13 +18,25 @@ form:
       - name: Paths to shared libraries
         description: >
           If the service uses one or more shared libraries that are stored in the Git repository outside of its source 
-          directory, you should specify the absolute paths to these libraries here. 
+          directory, you should specify the absolute paths to these libraries here.
           For example: "/libraries/ui-components".
         variable: paths_to_shared_libraries
         type: file_paths
 
   - name: Building configuration
     questions:
+
+      - name: Node version
+        description: The Node.js version used to build the source code.
+        variable: node_version
+        required: true
+        type: select
+        options:
+          - name: 16
+            value: 16
+          - name: 17
+            value: 17
+        default: 16
 
       - name: Package manager
         description: The package manager used to install the Node.js dependencies of the service.
