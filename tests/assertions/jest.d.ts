@@ -1,12 +1,12 @@
 declare global {
     namespace jest {
         interface Matchers<R> {
-            async toHaveValidSyntax(): R
-            async toFailDueToIncorrectFormInput(expectedExceptions: Record<string, string[]>): R
-            async toSucceed(): R
-            async toMatchParsedTemplate(pathToParsedTemplate: string): R
+            toHaveValidSyntax(): R
+            toFailDueToIncorrectFormInput(expectedExceptions: Record<string, string[]>): R
+            toSucceed(): R
+            toMatchParsedTemplate(pathToParsedTemplate: string): R
         }
     }
 }
-  
+
 export {};
