@@ -1,0 +1,195 @@
+name: local:nodejs
+version: latest
+alias: Node.js
+description: JavaScript service using the Node.js runtime
+icon:
+api: v1
+form:
+
+  - name: Source code
+    description:
+    questions:
+
+      - name: Path to source code
+        description: >
+          The absolute path to the directory in the Git repository that contains
+          the source code of the service. For example: "/services/web-client".
+        type: file_path
+        variable: path_to_source_code
+        value: src/
+
+      - name: Paths to shared libraries
+        description: >
+          If the service uses one or more shared libraries that are stored
+          in the Git repository outside of its source  directory, you should specify the
+          absolute paths to these libraries here.  For example: "/libraries/ui-components".
+        type: file_paths
+        variable: paths_to_shared_libraries
+        value: []
+
+  - name: Building configuration
+    description:
+    questions:
+
+      - name: Node version
+        description: The Node.js version used to build the source code.
+        type: select
+        variable: node_version
+        value: 16
+
+      - name: Package manager
+        description: The package manager used to install the Node.js dependencies of the
+          service.
+        type: select
+        variable: package_manager
+        value: npm
+
+      - name: Private NPM registries
+        description: >
+          The private NPM registries that host the private NPM packages of the service, if any.
+        type: structs
+        variable: private_npm_registries
+        value:
+          - url: https://npm.pkg.github.com/
+            scope: "@spatie"
+            auth_token: 5tS2O6eqzCMykMk9zF0za8L2QMbQGbbR
+        questions:
+          - - name: URL
+              description: The URL of the private registry.
+              type: string
+              variable: private_npm_registries.0.url
+              value: https://npm.pkg.github.com/
+            - name: Scope
+              description: 'The scope of the packages stored in the private registry. For example: @fortawesome'
+              type: string
+              variable: private_npm_registries.0.scope
+              value: "@spatie"
+            - name: Authentication token
+              description: The authentication token that should be used to authenticate
+                with the private registry.
+              type: password
+              variable: private_npm_registries.0.auth_token
+              value: 5tS2O6eqzCMykMk9zF0za8L2QMbQGbbR
+
+      - name: Build script
+        description: The script to build the service.
+        type: code
+        variable: build_script
+        value: npm run generate
+
+      - name: Path to server
+        description: The path to the Node.js server.
+        type: file_path
+        variable: path_to_server
+        value: src/server.js
+
+  - name: Operating system
+    description:
+    questions:
+
+      - name: Additional software
+        description: >
+          The installation script for the additional Linux packages or utilities
+          the service needs, if any. Within the  script, you can use any default Linux
+          Debian utility, including the apt package manager. Multi-line commands and comments
+          are not allowed in the script.
+        type: code
+        variable: additional_software_script
+        value:
+
+deployment:
+
+  - type: image
+    id: app-service-website-image-nodejs
+    name: nodejs
+    dockerfile_path: Dockerfile
+    file_paths:
+      - code-repository/src/**
+      - Dockerfile
+    arguments:
+      - name: NUXT_ENV_API_HOST
+        value: abc123
+      - name: NUXT_ENV_STRIPE_KEY
+        value: xyz789
+
+  - type: stateless_set
+    id: website-stateless-set-nodejs
+    name: nodejs
+    auto_scaling:
+      min_replicas: 1
+      max_replicas: 20
+      metrics:
+        - type: cpu_utilization
+          target: 60
+    update_strategy: rolling_update
+    containers:
+      - id: website-stateless-set-nodejs-container-nodejs
+        name: nodejs
+        image: app-service-website-image-nodejs
+        memory:
+          minimum: 32
+          maximum: 256
+        cpus:
+          minimum: 50
+          maximum: 500
+
+  - type: entrypoint
+    id: website-entrypoint-nodejs
+    name: nodejs
+    alias: Node.js service
+    description:
+    target:
+      type: set_target
+      set_type: stateless_set
+      set_id: website-stateless-set-nodejs
+    protocol: HTTPS
+    port: 3000
+
+interfaces:
+
+  - type: logs
+    name: Node.js logs
+    description:
+    source:
+      type: stateless_set
+      id: website-stateless-set-nodejs
+
+files:
+
+  - path: ".npmrc"
+    contents: |
+      //npm.pkg.github.com/:_authToken=5tS2O6eqzCMykMk9zF0za8L2QMbQGbbR
+      @spatie:registry=https://npm.pkg.github.com/
+
+  - path: Dockerfile
+    contents: |-
+      FROM europe-west3-docker.pkg.dev/smoothy-171414/base-images/nodejs/16:1.0.0
+      
+      # Install the additional Linux packages or utilites, if specified.
+      
+      # Create the directory to copy the source code to.
+      RUN mkdir -p /var/www/html/src/
+      
+      # CD into the directory.
+      WORKDIR /var/www/html/src/
+      
+      # Set the environment variables, if any.
+      ARG NUXT_ENV_API_HOST
+      ARG NUXT_ENV_STRIPE_KEY
+      
+      # Copy the npmrc configuration into the image to authenticate with private NPM registries.
+      COPY static/.npmrc /var/www/html/src/
+      
+      # Copy the locked dependency manifest into the directory and install the dependencies using the specified package manager.
+      COPY code-repository/src/package*.json /var/www/html/src/
+      RUN npm install
+      
+      # Copy the source code of the service into the directory.
+      COPY code-repository/src/ /var/www/html/src/
+      
+      # Copy the source code of the shared libraries into the directory.
+      
+      # Run the specified build script.
+      RUN npm run generate
+      
+      CMD ["node", "/var/www/html/src/server.js"]
