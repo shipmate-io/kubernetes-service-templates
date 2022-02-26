@@ -1,18 +1,18 @@
 <h3 align="center">Bring your applications 6 times faster to market</h3>
 
-<p align="center">By building, running, and scaling them with <a href="https://smoothy.cloud" target="_blank">Smoothy</a><br>the Cloud Native PaaS platform, designed for DevOps teams</p>
+<p align="center">By building, running, and scaling them with <a href="https://cody.build" target="_blank">Cody</a><br>the Cloud Native PaaS platform, designed for DevOps teams</p>
 
 <br>
 
 <p align="center">
-  <a href="https://smoothy.cloud" target="_blank">
-    <img src="https://smoothy.cloud/img/scenes/solution.svg" width="700px" alt="Smoothy.cloud" />
+  <a href="https://cody.build" target="_blank">
+    <img src="https://cody.build/img/scenes/solution.svg" width="700px" alt="Cody" />
   </a>
 </p>
 
 # Kubernetes Service Templates
 
-This repository contains the Kubernetes Service Templates for [Smoothy](https://smoothy.cloud).
+This repository contains the Kubernetes Service Templates for [Cody](https://cody.build).
 
 ## Testing
 
@@ -29,11 +29,11 @@ yarn
 Then run the tests of the specific template:
 
 ```
-yarn jest templates/<template>
+yarn test templates/<template>
 ```
 
 Or run the tests of all the templates at once:
 
 ```
-yarn jest
+yarn test
 ```
