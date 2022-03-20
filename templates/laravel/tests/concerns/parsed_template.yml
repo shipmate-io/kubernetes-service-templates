@@ -188,6 +188,8 @@ deployment:
       - php/run.sh
       - php/Dockerfile
     arguments:
+      - name: CODY_ENV
+        value: app
       - name: PRIVATE_COMPOSER_REGISTRY_URL_0
         value: private.packagist.com
       - name: PRIVATE_COMPOSER_REGISTRY_USERNAME_0
@@ -220,6 +222,8 @@ deployment:
         name: laravel
         image: app-service-backend-image-laravel
         environment_variables:
+          - name: CODY_ENV
+            value: app
           - name: APP_KEY
             value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
           - name: APP_ENV
@@ -231,10 +235,10 @@ deployment:
           - name: MAX_FILE_UPLOAD
             value: 25
         memory:
-          minimum: 64
+          minimum: 512
           maximum: 512
         cpus:
-          minimum: 250
+          minimum: 1000
           maximum: 1000
 
   - type: stateless_set
@@ -252,6 +256,8 @@ deployment:
         name: laravel
         image: app-service-backend-image-laravel
         environment_variables:
+          - name: CODY_ENV
+            value: app
           - name: APP_KEY
             value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
           - name: APP_ENV
@@ -265,10 +271,10 @@ deployment:
           - artisan
           - horizon
         memory:
-          minimum: 64
+          minimum: 512
           maximum: 512
         cpus:
-          minimum: 250
+          minimum: 1000
           maximum: 1000
 
   - type: cron_job
@@ -282,6 +288,8 @@ deployment:
         name: laravel
         image: app-service-backend-image-laravel
         environment_variables:
+          - name: CODY_ENV
+            value: app
           - name: APP_KEY
             value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
           - name: APP_ENV
@@ -295,11 +303,11 @@ deployment:
           - "/var/www/services/laravel/artisan"
           - schedule:run
         memory:
-          minimum: 64
-          maximum: 512
+          min: 64
+          max: 64
         cpus:
-          minimum: 100
-          maximum: 1000
+          min: 100
+          max: 100
 
   - type: job
     id: backend-job-init
@@ -311,6 +319,8 @@ deployment:
         name: laravel
         image: app-service-backend-image-laravel
         environment_variables:
+          - name: CODY_ENV
+            value: app
           - name: APP_KEY
             value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
           - name: APP_ENV
@@ -322,11 +332,11 @@ deployment:
         command:
           - "/scripts/init.sh"
         memory:
-          minimum: 64
-          maximum: 512
+          minimum: 256
+          maximum: 256
         cpus:
-          minimum: 100
-          maximum: 1000
+          minimum: 500
+          maximum: 500
 
   - type: stateless_set
     id: backend-stateless-set-nginx
@@ -346,11 +356,11 @@ deployment:
           - name: MAX_FILE_UPLOAD
             value: 25
         memory:
-          minimum: 32
-          maximum: 256
+          min: 64
+          max: 64
         cpus:
-          minimum: 50
-          maximum: 500
+          min: 100
+          max: 100
 
   - type: entrypoint
     id: backend-entrypoint-php

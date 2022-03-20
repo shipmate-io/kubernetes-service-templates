@@ -85,27 +85,6 @@ form:
           and comments are not allowed in the script.
         variable: additional_software_script
 
-  - name: Background processing
-    questions:
-
-      - type: boolean
-        name: Laravel scheduler
-        description: Enable the Laravel scheduler to run periodic tasks.
-        variable: run_scheduler
-
-      - type: structs
-        name: Daemons
-        description: >
-          The daemon processes that should run throughout the entire lifetime of the service.
-        variable: daemons
-        questions:
-          - type: string
-            name: Command
-            description: >
-              The command to start the daemon. For example: "php artisan queue:work".
-            variable: url
-            required: true
-
   - name: Frontend assets
     questions:
 
@@ -154,6 +133,27 @@ form:
             - case: "{{ variable.package_manager == 'yarn' }}"
               value: yarn run production
         if: "{{ variable.build_assets }}"
+
+  - name: Background processing
+    questions:
+
+      - type: boolean
+        name: Laravel scheduler
+        description: Enable the Laravel scheduler to run periodic tasks.
+        variable: run_scheduler
+
+      - type: structs
+        name: Daemons
+        description: >
+          The daemon processes that should run throughout the entire lifetime of the service.
+        variable: daemons
+        questions:
+          - type: string
+            name: Command
+            description: >
+              The command to start the daemon. For example: "php artisan queue:work".
+            variable: command
+            required: true
 
   - name: Deployment
     questions:
@@ -360,6 +360,6 @@ interface:
     if: "{{ variable.run_scheduler }}"
 
   - type: logs
-    name: "Daemon: {{ loop.value }}"
+    name: "Daemon: {{ loop.value.command }}"
     source: "{* stateless_set.daemon_{{ loop.key }} *}"
     loop: "{{ variable.daemons }}"

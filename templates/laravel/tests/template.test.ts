@@ -42,7 +42,9 @@ apt-get install -y default-mysql-client
         'persistent_storage': true,
         'run_scheduler': true,
         'daemons': [
-            'php artisan horizon'
+            {
+                'command': 'php artisan horizon',
+            },
         ],
         'build_assets': true,
         'package_manager': 'npm',
@@ -89,7 +91,9 @@ test("the service works correctly when installed", async () => {
             'timezone': 'Europe/Brussels',
             'run_scheduler': true,
             'daemons': [
-                'php artisan queue:work'
+                {
+                    'command': 'php artisan queue:work',
+                },
             ],
             'build_assets': true,
             'package_manager': 'npm',
