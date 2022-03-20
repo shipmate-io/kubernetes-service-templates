@@ -97,24 +97,6 @@ form:
           
           [ -d storage ] ?? echo "storage folder exists" || echo "storage folder does not exist"
 
-  - name: Background processing
-    description:
-    questions:
-
-      - name: Laravel scheduler
-        description: Enable the Laravel scheduler to run periodic tasks.
-        type: boolean
-        variable: run_scheduler
-        value: 'true'
-
-      - name: Daemons
-        description: >
-          The daemon processes that should run throughout the entire lifetime of the service.
-        type: list
-        variable: daemons
-        value:
-          - php artisan horizon
-
   - name: Frontend assets
     description:
     questions:
@@ -147,6 +129,28 @@ form:
         variable: build_assets_script
         value: npm run production
 
+  - name: Background processing
+    description:
+    questions:
+
+      - name: Laravel scheduler
+        description: Enable the Laravel scheduler to run periodic tasks.
+        type: boolean
+        variable: run_scheduler
+        value: 'true'
+
+      - name: Daemons
+        description: >
+          The daemon processes that should run throughout the entire lifetime of the service.
+        type: structs
+        variable: daemons
+        questions:
+          - - name: Command
+              description: >
+                The command to start the daemon. For example: "php artisan queue:work".
+              type: string
+              variable: daemons.0.command
+              value: php artisan horizon
 
   - name: Deployment
     description:
@@ -188,8 +192,6 @@ deployment:
       - php/run.sh
       - php/Dockerfile
     arguments:
-      - name: CODY_ENV
-        value: app
       - name: PRIVATE_COMPOSER_REGISTRY_URL_0
         value: private.packagist.com
       - name: PRIVATE_COMPOSER_REGISTRY_USERNAME_0
@@ -303,11 +305,11 @@ deployment:
           - "/var/www/services/laravel/artisan"
           - schedule:run
         memory:
-          min: 64
-          max: 64
+          minimum: 64
+          maximum: 64
         cpus:
-          min: 100
-          max: 100
+          minimum: 100
+          maximum: 100
 
   - type: job
     id: backend-job-init
@@ -356,11 +358,11 @@ deployment:
           - name: MAX_FILE_UPLOAD
             value: 25
         memory:
-          min: 64
-          max: 64
+          minimum: 64
+          maximum: 64
         cpus:
-          min: 100
-          max: 100
+          minimum: 100
+          maximum: 100
 
   - type: entrypoint
     id: backend-entrypoint-php
