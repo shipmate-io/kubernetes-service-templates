@@ -83,6 +83,8 @@ deployment:
       - server.conf
       - Dockerfile
     arguments:
+      - name: CODY_ENV
+        value: app
       - name: VUE_APP_API_HOST
         value: abc123
       - name: VUE_APP_STRIPE_KEY
@@ -103,11 +105,11 @@ deployment:
         name: vue
         image: app-service-website-image-vue
         memory:
-          minimum: 32
-          maximum: 256
+          minimum: 64
+          maximum: 64
         cpus:
-          minimum: 50
-          maximum: 500
+          minimum: 200
+          maximum: 200
 
   - type: entrypoint
     id: website-entrypoint-vue
@@ -135,6 +137,7 @@ files:
       FROM node:16 as build-stage
       
       # Set the environment variables, if any.
+      ARG CODY_ENV
       ARG VUE_APP_API_HOST
       ARG VUE_APP_STRIPE_KEY
       

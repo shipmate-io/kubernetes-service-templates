@@ -41,11 +41,11 @@ deployment:
         config_file_mounts: []
         volume_mounts: []
         memory:
-          minimum: 32
-          maximum: 256
+          minimum: 64
+          maximum: 64
         cpus:
-          minimum: 50
-          maximum: 500
+          minimum: 200
+          maximum: 200
         liveness_probe: null
         readiness_probe: null
 

@@ -77,6 +77,9 @@ deployment:
       - code-repository/**
       - server.conf
       - Dockerfile
+    arguments:
+      - name: CODY_ENV
+        value: app
 
   - type: stateless_set
     id: website-stateless-set-vue
@@ -93,11 +96,11 @@ deployment:
         name: vue
         image: app-service-website-image-vue
         memory:
-          minimum: 32
-          maximum: 256
+          minimum: 64
+          maximum: 64
         cpus:
-          minimum: 50
-          maximum: 500
+          minimum: 200
+          maximum: 200
 
   - type: entrypoint
     id: website-entrypoint-vue
@@ -125,6 +128,7 @@ files:
       FROM node:16 as build-stage
       
       # Set the environment variables, if any.
+      ARG CODY_ENV
       
       # Install the additional Linux packages or utilites, if specified.
       RUN apt-get update \

@@ -85,24 +85,6 @@ form:
           and comments are not allowed in the script.
         variable: additional_software_script
 
-  - name: Background processing
-    questions:
-
-      - type: boolean
-        name: Laravel scheduler
-        description: Enable the Laravel scheduler to run periodic tasks.
-        variable: run_scheduler
-
-      - type: list
-        name: Daemons
-        description: The daemon processes that should run throughout the entire lifetime of the service.
-        variable: daemons
-        options:
-          - name: "php artisan horizon"
-            value: "php artisan horizon"
-          - name: "php artisan queue:work"
-            value: "php artisan queue:work"
-
   - name: Frontend assets
     questions:
 
@@ -152,6 +134,27 @@ form:
               value: yarn run production
         if: "{{ variable.build_assets }}"
 
+  - name: Background processing
+    questions:
+
+      - type: boolean
+        name: Laravel scheduler
+        description: Enable the Laravel scheduler to run periodic tasks.
+        variable: run_scheduler
+
+      - type: structs
+        name: Daemons
+        description: >
+          The daemon processes that should run throughout the entire lifetime of the service.
+        variable: daemons
+        questions:
+          - type: string
+            name: Command
+            description: >
+              The command to start the daemon. For example: "php artisan queue:work".
+            variable: command
+            required: true
+
   - name: Deployment
     questions:
 
@@ -175,6 +178,25 @@ form:
         default: |
           sleep 60s
           php artisan migrate --force
+
+  - name: Compute resources
+    questions:
+
+      - type: binary_number
+        name: Memory
+        description: >
+          The amount of memory in megabytes (MB) that you want to allocate to the service.
+        variable: memory
+        required: true
+        default: 512
+      
+      - type: number
+        name: CPU cores
+        description: >
+          The number of CPU cores that you want to allocate to the service.
+        variable: cpus
+        required: true
+        default: 1
 
 deployment:
 
@@ -219,28 +241,28 @@ deployment:
           - name: MAX_FILE_UPLOAD
             value: "{{ variable.maximum_file_upload_size }}"
         memory:
-          min: 64
-          max: 512
+          min: "{{ variable.memory }}"
+          max: "{{ variable.memory }}"
         cpus:
-          min: 250
-          max: 1000
+          min: "{{ variable.cpus * 1000 }}"
+          max: "{{ variable.cpus * 1000 }}"
 
   - type: stateless_set
     name: "daemon_{{ loop.key }}"
     containers:
       - name: laravel
         image: "{* image.laravel *}"
-        command: "{{ loop.value }}"
+        command: "{{ loop.value.command }}"
         environment:
           - map: "{{ environment }}"
           - name: TIMEZONE
             value: "{{ variable.timezone }}"
         memory:
-          min: 64
-          max: 512
+          min: "{{ variable.memory }}"
+          max: "{{ variable.memory }}"
         cpus:
-          min: 250
-          max: 1000
+          min: "{{ variable.cpus * 1000 }}"
+          max: "{{ variable.cpus * 1000 }}"
     loop: "{{ variable.daemons }}"
 
   - type: cron_job
@@ -256,10 +278,10 @@ deployment:
             value: "{{ variable.timezone }}"
         memory:
           min: 64
-          max: 512
+          max: 64
         cpus:
           min: 100
-          max: 1000
+          max: 100
     if: "{{ variable.run_scheduler }}"
 
   - type: job
@@ -273,11 +295,11 @@ deployment:
           - name: TIMEZONE
             value: "{{ variable.timezone }}"
         memory:
-          min: 64
-          max: 512
+          min: "{{ variable.memory / 2 }}"
+          max: "{{ variable.memory / 2 }}"
         cpus:
-          min: 100
-          max: 1000
+          min: "{{ variable.cpus * 1000 / 2 }}"
+          max: "{{ variable.cpus * 1000 / 2 }}"
     if: "{{ variable.release_script }}"
 
   - type: stateless_set
@@ -289,11 +311,11 @@ deployment:
           - name: MAX_FILE_UPLOAD
             value: "{{ variable.maximum_file_upload_size }}"
         memory:
-          min: 32
-          max: 256
+          min: 64
+          max: 64
         cpus:
-          min: 50
-          max: 500
+          min: 100
+          max: 100
 
   - type: entrypoint
     name: php
@@ -338,6 +360,6 @@ interface:
     if: "{{ variable.run_scheduler }}"
 
   - type: logs
-    name: "Daemon: {{ loop.value }}"
+    name: "Daemon: {{ loop.value.command }}"
     source: "{* stateless_set.daemon_{{ loop.key }} *}"
     loop: "{{ variable.daemons }}"

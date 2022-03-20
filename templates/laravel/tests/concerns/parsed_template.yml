@@ -97,24 +97,6 @@ form:
           
           [ -d storage ] ?? echo "storage folder exists" || echo "storage folder does not exist"
 
-  - name: Background processing
-    description:
-    questions:
-
-      - name: Laravel scheduler
-        description: Enable the Laravel scheduler to run periodic tasks.
-        type: boolean
-        variable: run_scheduler
-        value: 'true'
-
-      - name: Daemons
-        description: >
-          The daemon processes that should run throughout the entire lifetime of the service.
-        type: list
-        variable: daemons
-        value:
-          - php artisan horizon
-
   - name: Frontend assets
     description:
     questions:
@@ -147,6 +129,28 @@ form:
         variable: build_assets_script
         value: npm run production
 
+  - name: Background processing
+    description:
+    questions:
+
+      - name: Laravel scheduler
+        description: Enable the Laravel scheduler to run periodic tasks.
+        type: boolean
+        variable: run_scheduler
+        value: 'true'
+
+      - name: Daemons
+        description: >
+          The daemon processes that should run throughout the entire lifetime of the service.
+        type: structs
+        variable: daemons
+        questions:
+          - - name: Command
+              description: >
+                The command to start the daemon. For example: "php artisan queue:work".
+              type: string
+              variable: daemons.0.command
+              value: php artisan horizon
 
   - name: Deployment
     description:
@@ -220,6 +224,8 @@ deployment:
         name: laravel
         image: app-service-backend-image-laravel
         environment_variables:
+          - name: CODY_ENV
+            value: app
           - name: APP_KEY
             value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
           - name: APP_ENV
@@ -231,10 +237,10 @@ deployment:
           - name: MAX_FILE_UPLOAD
             value: 25
         memory:
-          minimum: 64
+          minimum: 512
           maximum: 512
         cpus:
-          minimum: 250
+          minimum: 1000
           maximum: 1000
 
   - type: stateless_set
@@ -252,6 +258,8 @@ deployment:
         name: laravel
         image: app-service-backend-image-laravel
         environment_variables:
+          - name: CODY_ENV
+            value: app
           - name: APP_KEY
             value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
           - name: APP_ENV
@@ -265,10 +273,10 @@ deployment:
           - artisan
           - horizon
         memory:
-          minimum: 64
+          minimum: 512
           maximum: 512
         cpus:
-          minimum: 250
+          minimum: 1000
           maximum: 1000
 
   - type: cron_job
@@ -282,6 +290,8 @@ deployment:
         name: laravel
         image: app-service-backend-image-laravel
         environment_variables:
+          - name: CODY_ENV
+            value: app
           - name: APP_KEY
             value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
           - name: APP_ENV
@@ -296,10 +306,10 @@ deployment:
           - schedule:run
         memory:
           minimum: 64
-          maximum: 512
+          maximum: 64
         cpus:
           minimum: 100
-          maximum: 1000
+          maximum: 100
 
   - type: job
     id: backend-job-init
@@ -311,6 +321,8 @@ deployment:
         name: laravel
         image: app-service-backend-image-laravel
         environment_variables:
+          - name: CODY_ENV
+            value: app
           - name: APP_KEY
             value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
           - name: APP_ENV
@@ -322,11 +334,11 @@ deployment:
         command:
           - "/scripts/init.sh"
         memory:
-          minimum: 64
-          maximum: 512
+          minimum: 256
+          maximum: 256
         cpus:
-          minimum: 100
-          maximum: 1000
+          minimum: 500
+          maximum: 500
 
   - type: stateless_set
     id: backend-stateless-set-nginx
@@ -346,11 +358,11 @@ deployment:
           - name: MAX_FILE_UPLOAD
             value: 25
         memory:
-          minimum: 32
-          maximum: 256
+          minimum: 64
+          maximum: 64
         cpus:
-          minimum: 50
-          maximum: 500
+          minimum: 100
+          maximum: 100
 
   - type: entrypoint
     id: backend-entrypoint-php
