@@ -108,6 +108,8 @@ deployment:
       - code-repository/src/**
       - Dockerfile
     arguments:
+      - name: CODY_ENV
+        value: app
       - name: NUXT_ENV_API_HOST
         value: abc123
       - name: NUXT_ENV_STRIPE_KEY
@@ -127,12 +129,19 @@ deployment:
       - id: website-stateless-set-nodejs-container-nodejs
         name: nodejs
         image: app-service-website-image-nodejs
+        environment_variables:
+          - name: CODY_ENV
+            value: app
+          - name: NUXT_ENV_API_HOST
+            value: abc123
+          - name: NUXT_ENV_STRIPE_KEY
+            value: xyz789
         memory:
-          minimum: 32
-          maximum: 256
+          minimum: 512
+          maximum: 512
         cpus:
-          minimum: 50
-          maximum: 500
+          minimum: 1000
+          maximum: 1000
 
   - type: entrypoint
     id: website-entrypoint-nodejs
@@ -175,6 +184,7 @@ files:
       WORKDIR /var/www/html/src/
       
       # Set the environment variables, if any.
+      ARG CODY_ENV
       ARG NUXT_ENV_API_HOST
       ARG NUXT_ENV_STRIPE_KEY
       

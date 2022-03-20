@@ -140,6 +140,8 @@ deployment:
     containers:
       - name: nodejs
         image: "{* image.nodejs *}"
+        environment:
+          - map: "{{ environment }}"
         memory:
           min: "{{ variable.memory }}"
           max: "{{ variable.memory }}"
