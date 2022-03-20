@@ -24,6 +24,7 @@ form:
         description: >
           The amount of memory in megabytes (MB) that you want to allocate to the service.
         variable: memory
+        required: true
         default: 64
       
       - type: number
@@ -31,6 +32,7 @@ form:
         description: >
           The number of CPU cores that you want to allocate to the service.
         variable: cpus
+        required: true
         default: 0.2
 
 deployment:
