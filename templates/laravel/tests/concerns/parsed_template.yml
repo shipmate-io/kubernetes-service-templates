@@ -28,10 +28,6 @@ form:
         value:
           - libraries/ui-components
 
-  - name: PHP settings
-    description:
-    questions:
-
       - name: PHP version
         description: The PHP version in which the source code of the service is written.
         type: select
@@ -67,36 +63,6 @@ form:
               variable: private_composer_registries.0.password
               value: secret
 
-      - name: Maximum file upload size
-        description: The maximum allowed size in megabytes (MB) of files uploaded to the
-          service.
-        type: integer
-        variable: maximum_file_upload_size
-        value: '25'
-
-  - name: Operating system
-    description:
-    questions:
-
-      - name: Timezone
-        description:
-        type: timezone
-        variable: timezone
-        value: Europe/Brussels
-
-      - name: Additional software
-        description: >
-          The installation script for the additional Linux packages or utilities
-          the service needs, if any. Within the  script, you can use any default Linux
-          Debian utility, including the apt package manager. Multi-line commands and comments
-          are not allowed in the script.
-        type: code
-        variable: additional_software_script
-        value: |-
-          apt-get install -y default-mysql-client
-          
-          [ -d storage ] ?? echo "storage folder exists" || echo "storage folder does not exist"
-
   - name: Frontend assets
     description:
     questions:
@@ -128,6 +94,36 @@ form:
         type: code
         variable: build_assets_script
         value: npm run production
+
+  - name: Operating system
+    description:
+    questions:
+
+      - name: Timezone
+        description:
+        type: timezone
+        variable: timezone
+        value: Europe/Brussels
+
+      - name: Maximum file upload size
+        description: The maximum allowed size in megabytes (MB) of files uploaded to the
+          service.
+        type: integer
+        variable: maximum_file_upload_size
+        value: '25'
+
+      - name: Additional software
+        description: >
+          The installation script for the additional Linux packages or utilities
+          the service needs, if any. Within the  script, you can use any default Linux
+          Debian utility, including the apt package manager. Multi-line commands and comments
+          are not allowed in the script.
+        type: code
+        variable: additional_software_script
+        value: |-
+          apt-get install -y default-mysql-client
+          
+          [ -d storage ] ?? echo "storage folder exists" || echo "storage folder does not exist"
 
   - name: Background processing
     description:
@@ -279,6 +275,42 @@ deployment:
           minimum: 1000
           maximum: 1000
 
+  - type: stateless_set
+    id: backend-stateless-set-daemon-1
+    name: daemon_1
+    auto_scaling:
+      min_replicas: 1
+      max_replicas: 20
+      metrics:
+        - type: cpu_utilization
+          target: 60
+    update_strategy: rolling_update
+    containers:
+      - id: backend-stateless-set-daemon-1-container-laravel
+        name: laravel
+        image: app-service-backend-image-laravel
+        environment_variables:
+          - name: CODY_ENV
+            value: app
+          - name: APP_KEY
+            value: base64:c3SzeMQZZHPT+eLQH6BnpDhw/uKH2N5zgM2x2a8qpcA=
+          - name: APP_ENV
+            value: production
+          - name: APP_DEBUG
+            value: 'false'
+          - name: TIMEZONE
+            value: Europe/Brussels
+        command:
+          - php
+          - artisan
+          - queue:work
+        memory:
+          minimum: 1024
+          maximum: 1024
+        cpus:
+          minimum: 500
+          maximum: 500
+
   - type: cron_job
     id: backend-cron-job-scheduler
     name: scheduler
@@ -305,11 +337,11 @@ deployment:
           - "/var/www/services/laravel/artisan"
           - schedule:run
         memory:
-          minimum: 64
-          maximum: 64
+          minimum: 256
+          maximum: 256
         cpus:
-          minimum: 100
-          maximum: 100
+          minimum: 500
+          maximum: 500
 
   - type: job
     id: backend-job-init

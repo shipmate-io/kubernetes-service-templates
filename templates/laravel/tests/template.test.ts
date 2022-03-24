@@ -45,6 +45,11 @@ apt-get install -y default-mysql-client
             {
                 'command': 'php artisan horizon',
             },
+            {
+                'command': 'php artisan queue:work',
+                'cpus': 0.5,
+                'memory': 1024,
+            },
         ],
         'build_assets': true,
         'package_manager': 'npm',
